@@ -1,0 +1,21 @@
+.diseases-page {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.diseases-content {
+  text-align: center;
+  padding: 3rem 0;
+}
+
+.diseases-content h2 {
+  color: #2c5f2d;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.diseases-content p {
+  font-size: 1.1rem;
+  color: #666;
+}

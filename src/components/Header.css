@@ -1,0 +1,13 @@
+.header {
+  background-color: #2c5f2d;
+  color: white;
+  padding: 1rem 2rem;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.clinic-title {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: bold;
+}
