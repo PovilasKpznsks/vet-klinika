@@ -1,15 +1,29 @@
 import { useState } from 'react'
 import './Navbar.css'
 
-const Navbar = ({ currentPage, setCurrentPage }) => {
-  const menuItems = [
-    { id: 'home', label: 'Pagrindinis' },
-    { id: 'account', label: 'Paskyra' },
-    { id: 'diseases', label: 'Ligos' },
-    { id: 'products', label: 'Produktai' },
-    { id: 'visits', label: 'Vizitai' },
-    { id: 'auth', label: 'Prisijungti/Registruotis' }
-  ]
+const Navbar = ({ currentPage, setCurrentPage, isAuthenticated }) => {
+  const getMenuItems = () => {
+    const baseItems = [
+      { id: 'home', label: 'Pagrindinis' },
+      { id: 'diseases', label: 'Ligos' },
+      { id: 'products', label: 'Produktai' }
+    ]
+
+    if (isAuthenticated) {
+      return [
+        ...baseItems,
+        { id: 'account', label: 'Paskyra' },
+        { id: 'visits', label: 'Vizitai' }
+      ]
+    } else {
+      return [
+        ...baseItems,
+        { id: 'auth', label: 'Prisijungti' }
+      ]
+    }
+  }
+
+  const menuItems = getMenuItems()
 
   return (
     <nav className="navbar">
