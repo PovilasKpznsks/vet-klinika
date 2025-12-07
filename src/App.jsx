@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Header from './components/Header'
 import Navbar from './components/Navbar'
+import NotificationContainer from './components/NotificationContainer'
 import Home from './pages/Home'
 import Account from './pages/Account'
 import Diseases from './pages/Diseases'
@@ -38,6 +39,7 @@ function App() {
       <main className="main-content">
         {renderPage()}
       </main>
+      <NotificationContainer />
     </div>
   )
 }

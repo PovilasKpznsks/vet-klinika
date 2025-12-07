@@ -2,20 +2,457 @@
   padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
+  background-color: #f8f9fa;
+  min-height: 100vh;
 }
 
-.account-content {
+.account-header {
   text-align: center;
-  padding: 3rem 0;
+  margin-bottom: 2rem;
 }
 
-.account-content h2 {
+.account-header h2 {
   color: #2c5f2d;
-  font-size: 2rem;
-  margin-bottom: 1rem;
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
 }
 
-.account-content p {
+.account-header p {
   font-size: 1.1rem;
   color: #666;
+  margin-bottom: 2rem;
+}
+
+/* Tabuliacijos mygtukai */
+.account-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 1rem;
+}
+
+.tab {
+  background: none;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  color: #666;
+  font-weight: 500;
+}
+
+.tab:hover {
+  background-color: #e9ecef;
+  color: #2c5f2d;
+}
+
+.tab.active {
+  background-color: #2c5f2d;
+  color: white;
+  font-weight: 600;
+}
+
+/* Turinys */
+.account-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+}
+
+/* Profilio skyrius */
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 2rem;
+  background: linear-gradient(135deg, #2c5f2d, #4a7c4a);
+  color: white;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+}
+
+.profile-avatar {
+  width: 80px;
+  height: 80px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: bold;
+  backdrop-filter: blur(10px);
+}
+
+.profile-info {
+  flex: 1;
+}
+
+.profile-info h3 {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.profile-info p {
+  opacity: 0.9;
+  font-size: 1.1rem;
+}
+
+.edit-btn {
+  background-color: white;
+  color: #2c5f2d;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.edit-btn:hover {
+  background-color: #f8f9fa;
+  transform: translateY(-2px);
+}
+
+.edit-btn.save {
+  background-color: #28a745;
+  color: white;
+}
+
+/* Formos */
+.form-section {
+  margin-bottom: 2rem;
+}
+
+.form-section h4 {
+  color: #2c5f2d;
+  font-size: 1.3rem;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 0.5rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 0.75rem;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #2c5f2d;
+  box-shadow: 0 0 0 3px rgba(44, 95, 45, 0.1);
+}
+
+.form-group input:disabled,
+.form-group select:disabled,
+.form-group textarea:disabled {
+  background-color: #f8f9fa;
+  color: #666;
+  cursor: not-allowed;
+}
+
+/* Sveikatos statistikos korteles */
+.health-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #ffffff, #f8f9fa);
+  padding: 1.5rem;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #2c5f2d;
+  transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card h4 {
+  color: #2c5f2d;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.stat-number {
+  display: block;
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.stat-card p {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* Nustatymai */
+.settings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.setting-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.setting-item label {
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.setting-item input[type="checkbox"] {
+  transform: scale(1.2);
+  accent-color: #2c5f2d;
+}
+
+.setting-item select {
+  margin-left: auto;
+  padding: 0.5rem;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  background-color: white;
+}
+
+/* Saugumo veiksmai */
+.security-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 300px;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+}
+
+.btn.secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn.secondary:hover:not(:disabled) {
+  background-color: #5a6268;
+  transform: translateY(-2px);
+}
+
+.btn.danger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn.danger:hover:not(:disabled) {
+  background-color: #c82333;
+  transform: translateY(-2px);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Klaidų pranešimai */
+.error-message {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+/* Įkėlimo būsenos */
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  font-size: 1.1rem;
+  color: #666;
+}
+
+.loading-spinner::before {
+  content: '';
+  width: 30px;
+  height: 30px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #2c5f2d;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Išjungti mygtukus */
+.tab:disabled,
+.edit-btn:disabled,
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Responsive dizainas */
+@media (max-width: 768px) {
+  .account-page {
+    padding: 1rem;
+  }
+
+  .account-header h2 {
+    font-size: 2rem;
+  }
+
+  .account-tabs {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .profile-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .health-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .setting-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .setting-item select {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .health-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-avatar {
+    width: 60px;
+    height: 60px;
+    font-size: 1.5rem;
+  }
+
+  .profile-info h3 {
+    font-size: 1.5rem;
+  }
+}
+
+/* Animacijos */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.account-content > div {
+  animation: fadeIn 0.5s ease;
+}
+
+/* Fokuso indikatoriai prieinamumui */
+.tab:focus,
+.edit-btn:focus,
+.btn:focus {
+  outline: 3px solid rgba(44, 95, 45, 0.3);
+  outline-offset: 2px;
+}
+
+/* Scroll bar stilizavimas */
+.account-page::-webkit-scrollbar {
+  width: 8px;
+}
+
+.account-page::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.account-page::-webkit-scrollbar-thumb {
+  background: #2c5f2d;
+  border-radius: 4px;
+}
+
+.account-page::-webkit-scrollbar-thumb:hover {
+  background: #1e4220;
 }

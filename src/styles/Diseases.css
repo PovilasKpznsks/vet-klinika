@@ -1,7 +1,9 @@
 .diseases-page {
   padding: 2rem;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
+  background-color: #f8f9fa;
+  min-height: 100vh;
 }
 
 .diseases-content {
@@ -18,4 +20,502 @@
 .diseases-content p {
   font-size: 1.1rem;
   color: #666;
+}
+
+.diseases-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.diseases-header h2 {
+  color: #2c5f2d;
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.diseases-header p {
+  font-size: 1.1rem;
+  color: #666;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Paieška ir filtrai */
+.search-filters {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.search-bar {
+  flex: 2;
+}
+
+.search-bar input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.search-bar input:focus {
+  outline: none;
+  border-color: #2c5f2d;
+  box-shadow: 0 0 0 3px rgba(44, 95, 45, 0.1);
+}
+
+.category-filter {
+  flex: 1;
+  min-width: 250px;
+}
+
+.category-filter select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 1rem;
+  background-color: white;
+  cursor: pointer;
+}
+
+/* Ligų tinklelis */
+.diseases-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.disease-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border-left: 4px solid #2c5f2d;
+}
+
+.disease-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+}
+
+.disease-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.disease-header h3 {
+  color: #2c5f2d;
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+}
+
+.severity-badge {
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.disease-description {
+  color: #555;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.disease-category {
+  margin-bottom: 1.5rem;
+}
+
+.category-label {
+  background-color: #e9ecef;
+  color: #495057;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.disease-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn.primary {
+  background-color: #2c5f2d;
+  color: white;
+}
+
+.btn.primary:hover {
+  background-color: #1e4220;
+  transform: translateY(-2px);
+}
+
+.btn.secondary {
+  background-color: transparent;
+  color: #2c5f2d;
+  border: 2px solid #2c5f2d;
+}
+
+.btn.secondary:hover {
+  background-color: #2c5f2d;
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* Rezultatų nėra */
+.no-results {
+  text-align: center;
+  padding: 3rem;
+  background: white;
+  border-radius: 12px;
+  color: #666;
+}
+
+/* Vartotojo ligų istorija */
+.user-diseases-section {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.user-diseases-section h3 {
+  color: #2c5f2d;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+}
+
+.user-diseases-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.user-disease-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 3px solid #28a745;
+}
+
+.diagnosis-date {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* Modalo langas */
+.disease-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.disease-modal {
+  background: white;
+  border-radius: 12px;
+  max-width: 700px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2rem 2rem 1rem;
+  border-bottom: 2px solid #f1f3f4;
+}
+
+.modal-header h3 {
+  color: #2c5f2d;
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #999;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background-color: #f1f3f4;
+  color: #333;
+}
+
+.modal-content {
+  padding: 2rem;
+}
+
+.disease-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.detail-section h4 {
+  color: #2c5f2d;
+  font-size: 1.2rem;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+
+.detail-section p {
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 0;
+}
+
+.detail-section ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.detail-section li {
+  color: #555;
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.disease-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.meta-label {
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.meta-value {
+  font-weight: 600;
+  color: #333;
+}
+
+.meta-value.severity {
+  font-weight: 700;
+}
+
+/* Įkėlimo būsena */
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  font-size: 1.2rem;
+  color: #666;
+  position: relative;
+}
+
+.loading-spinner::before {
+  content: '';
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #2c5f2d;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive dizainas */
+@media (max-width: 768px) {
+  .diseases-page {
+    padding: 1rem;
+  }
+
+  .diseases-header h2 {
+    font-size: 2rem;
+  }
+
+  .search-filters {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .diseases-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .disease-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .disease-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .btn {
+    justify-self: stretch;
+  }
+
+  .disease-modal {
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
+  }
+
+  .modal-header,
+  .modal-content {
+    padding: 1.5rem;
+  }
+
+  .disease-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .user-disease-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .diseases-page {
+    padding: 0.5rem;
+  }
+
+  .diseases-header h2 {
+    font-size: 1.75rem;
+  }
+
+  .disease-card {
+    padding: 1rem;
+  }
+
+  .modal-header,
+  .modal-content {
+    padding: 1rem;
+  }
+}
+
+/* Animacijos */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.disease-card {
+  animation: fadeIn 0.5s ease;
+}
+
+.disease-modal {
+  animation: fadeIn 0.3s ease;
+}
+
+/* Fokuso indikatoriai */
+.btn:focus,
+.search-bar input:focus,
+.category-filter select:focus,
+.close-btn:focus {
+  outline: 3px solid rgba(44, 95, 45, 0.3);
+  outline-offset: 2px;
+}
+
+/* Hover efektai */
+.category-label:hover {
+  background-color: #dee2e6;
+  cursor: default;
+}
+
+.user-disease-item:hover {
+  background-color: #e9ecef;
+}
+
+/* Pritaikymas spausdinti */
+@media print {
+  .diseases-page {
+    background: white;
+  }
+  
+  .disease-card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+    page-break-inside: avoid;
+  }
+  
+  .search-filters,
+  .disease-actions,
+  .close-btn {
+    display: none;
+  }
 }
