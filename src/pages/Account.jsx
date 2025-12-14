@@ -14,7 +14,6 @@ const Account = () => {
     // Asmeninė informacija
     firstName: "",
     lastName: "",
-    personalCode: "",
     email: "",
     phone: "",
     address: "",
@@ -45,15 +44,13 @@ const Account = () => {
   const [showPetForm, setShowPetForm] = useState(false);
   const [editingPet, setEditingPet] = useState(null);
   const [newPet, setNewPet] = useState({
-    name: "",
-    species: "",
-    breed: "",
-    birthDate: "",
-    gender: "",
-    color: "",
-    weight: "",
-    microchipNumber: "",
-    notes: "",
+    vardas: "",
+    rusis: "",
+    klase: "",
+    gimimo_data: "",
+    spalva: "",
+    svoris: "",
+    mikrocipo_numeris: "",
   });
 
   // Duomenų įkėlimas iš API
@@ -133,27 +130,23 @@ const Account = () => {
   const getMockPets = () => [
     {
       id: 1,
-      name: "Rексas",
-      species: "Šuo",
-      breed: "Vokiečių aviganis",
-      birthDate: "2020-05-15",
-      gender: "Patinas",
-      color: "Juodas ir rudas",
-      weight: "32",
-      microchipNumber: "123456789012345",
-      notes: "Draugiškas, bet bijo vaikų",
+      vardas: "Rексас",
+      rusis: "Šuo",
+      klase: "Žinduoliai",
+      gimimo_data: "2020-05-15",
+      spalva: "Juodas ir rudas",
+      svoris: "32",
+      mikrocipo_numeris: "123456789012345",
     },
     {
       id: 2,
-      name: "Mūza",
-      species: "Katė",
-      breed: "Britanų trumpaplaukė",
-      birthDate: "2019-03-20",
-      gender: "Patelė",
-      color: "Pilka",
-      weight: "4.5",
-      microchipNumber: "987654321098765",
-      notes: "Alergiška žuviai",
+      vardas: "Mūza",
+      rusis: "Katė",
+      klase: "Žinduoliai",
+      gimimo_data: "2019-03-20",
+      spalva: "Pilka",
+      svoris: "4.5",
+      mikrocipo_numeris: "987654321098765",
     },
   ];
 
@@ -231,15 +224,13 @@ const Account = () => {
   const handleAddPet = () => {
     setEditingPet(null);
     setNewPet({
-      name: "",
-      species: "",
-      breed: "",
-      birthDate: "",
-      gender: "",
-      color: "",
-      weight: "",
-      microchipNumber: "",
-      notes: "",
+      vardas: "",
+      rusis: "",
+      klase: "",
+      gimimo_data: "",
+      spalva: "",
+      svoris: "",
+      mikrocipo_numeris: "",
     });
     setShowPetForm(true);
   };
@@ -247,15 +238,13 @@ const Account = () => {
   const handleEditPet = (pet) => {
     setEditingPet(pet.id);
     setNewPet({
-      name: pet.name,
-      species: pet.species,
-      breed: pet.breed,
-      birthDate: pet.birthDate,
-      gender: pet.gender,
-      color: pet.color,
-      weight: pet.weight,
-      microchipNumber: pet.microchipNumber,
-      notes: pet.notes,
+      vardas: pet.vardas,
+      rusis: pet.rusis,
+      klase: pet.klase,
+      gimimo_data: pet.gimimo_data,
+      spalva: pet.spalva,
+      svoris: pet.svoris,
+      mikrocipo_numeris: pet.mikrocipo_numeris,
     });
     setShowPetForm(true);
   };
@@ -324,10 +313,10 @@ const Account = () => {
     }
   };
 
-  const calculateAge = (birthDate) => {
-    if (!birthDate) return "Nežinomas";
+  const calculateAge = (gimimo_data) => {
+    if (!gimimo_data) return "Nežinomas";
     const today = new Date();
-    const birth = new Date(birthDate);
+    const birth = new Date(gimimo_data);
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
 
@@ -391,17 +380,6 @@ const Account = () => {
                 type="text"
                 value={userData.lastName}
                 onChange={(e) => handleInputChange("lastName", e.target.value)}
-                disabled={!isEditing || loading}
-              />
-            </div>
-            <div className="form-group">
-              <label>Asmens kodas</label>
-              <input
-                type="text"
-                value={userData.personalCode}
-                onChange={(e) =>
-                  handleInputChange("personalCode", e.target.value)
-                }
                 disabled={!isEditing || loading}
               />
             </div>
@@ -478,9 +456,9 @@ const Account = () => {
                     : "🐾"}
                 </div>
                 <div className="pet-info">
-                  <h4>{pet.name}</h4>
+                  <h4>{pet.vardas}</h4>
                   <p>
-                    {pet.species} • {pet.breed}
+                    {pet.rusis} • {pet.klase}
                   </p>
                 </div>
               </div>
@@ -488,30 +466,24 @@ const Account = () => {
               <div className="pet-details">
                 <div className="detail-row">
                   <span className="label">Amžius:</span>
-                  <span>{calculateAge(pet.birthDate)}</span>
+                  <span>{calculateAge(pet.gimimo_data)}</span>
                 </div>
                 <div className="detail-row">
-                  <span className="label">Lytis:</span>
-                  <span>{pet.gender}</span>
+                  <span className="label">Klasė:</span>
+                  <span>{pet.klase}</span>
                 </div>
                 <div className="detail-row">
                   <span className="label">Spalva:</span>
-                  <span>{pet.color}</span>
+                  <span>{pet.spalva}</span>
                 </div>
                 <div className="detail-row">
                   <span className="label">Svoris:</span>
-                  <span>{pet.weight} kg</span>
+                  <span>{pet.svoris} kg</span>
                 </div>
-                {pet.microchipNumber && (
+                {pet.mikrocipo_numeris && (
                   <div className="detail-row">
                     <span className="label">Mikroschemos nr.:</span>
-                    <span className="microchip">{pet.microchipNumber}</span>
-                  </div>
-                )}
-                {pet.notes && (
-                  <div className="detail-row full-width">
-                    <span className="label">Pastabos:</span>
-                    <span className="notes">{pet.notes}</span>
+                    <span className="microchip">{pet.mikrocipo_numeris}</span>
                   </div>
                 )}
               </div>
@@ -560,9 +532,9 @@ const Account = () => {
                   <input
                     type="text"
                     required
-                    value={newPet.name}
+                    value={newPet.vardas}
                     onChange={(e) =>
-                      handlePetInputChange("name", e.target.value)
+                      handlePetInputChange("vardas", e.target.value)
                     }
                     placeholder="Pvz.: Reksas"
                   />
@@ -572,9 +544,9 @@ const Account = () => {
                   <label>Rūšis*</label>
                   <select
                     required
-                    value={newPet.species}
+                    value={newPet.rusis}
                     onChange={(e) =>
-                      handlePetInputChange("species", e.target.value)
+                      handlePetInputChange("rusis", e.target.value)
                     }
                   >
                     <option value="">Pasirinkite rūšį</option>
@@ -589,15 +561,20 @@ const Account = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>Veislė</label>
-                  <input
-                    type="text"
-                    value={newPet.breed}
+                  <label>Klasė*</label>
+                  <select
+                    required
+                    value={newPet.klase}
                     onChange={(e) =>
-                      handlePetInputChange("breed", e.target.value)
+                      handlePetInputChange("klase", e.target.value)
                     }
-                    placeholder="Pvz.: Vokiečių aviganis"
-                  />
+                  >
+                    <option value="">Pasirinkite klasę</option>
+                    <option value="Žinduoliai">Žinduoliai</option>
+                    <option value="Paukščiai">Paukščiai</option>
+                    <option value="Ropliai">Ropliai</option>
+                    <option value="Žuvys">Žuvys</option>
+                  </select>
                 </div>
 
                 <div className="form-group">
@@ -605,36 +582,21 @@ const Account = () => {
                   <input
                     type="date"
                     required
-                    value={newPet.birthDate}
+                    value={newPet.gimimo_data}
                     onChange={(e) =>
-                      handlePetInputChange("birthDate", e.target.value)
+                      handlePetInputChange("gimimo_data", e.target.value)
                     }
                     max={new Date().toISOString().split("T")[0]}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label>Lytis*</label>
-                  <select
-                    required
-                    value={newPet.gender}
-                    onChange={(e) =>
-                      handlePetInputChange("gender", e.target.value)
-                    }
-                  >
-                    <option value="">Pasirinkite lytį</option>
-                    <option value="Patinas">Patinas</option>
-                    <option value="Patelė">Patelė</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
                   <label>Spalva</label>
                   <input
                     type="text"
-                    value={newPet.color}
+                    value={newPet.spalva}
                     onChange={(e) =>
-                      handlePetInputChange("color", e.target.value)
+                      handlePetInputChange("spalva", e.target.value)
                     }
                     placeholder="Pvz.: Juodas ir rudas"
                   />
@@ -645,9 +607,9 @@ const Account = () => {
                   <input
                     type="number"
                     step="0.1"
-                    value={newPet.weight}
+                    value={newPet.svoris}
                     onChange={(e) =>
-                      handlePetInputChange("weight", e.target.value)
+                      handlePetInputChange("svoris", e.target.value)
                     }
                     placeholder="Pvz.: 25.5"
                   />
@@ -657,24 +619,12 @@ const Account = () => {
                   <label>Mikroschemos numeris</label>
                   <input
                     type="text"
-                    value={newPet.microchipNumber}
+                    value={newPet.mikrocipo_numeris}
                     onChange={(e) =>
-                      handlePetInputChange("microchipNumber", e.target.value)
+                      handlePetInputChange("mikrocipo_numeris", e.target.value)
                     }
                     placeholder="15 skaitmenų"
                     maxLength="15"
-                  />
-                </div>
-
-                <div className="form-group full-width">
-                  <label>Pastabos</label>
-                  <textarea
-                    value={newPet.notes}
-                    onChange={(e) =>
-                      handlePetInputChange("notes", e.target.value)
-                    }
-                    placeholder="Papildoma informacija apie gyvūną (alergijai, elgesio ypatumai ir pan.)"
-                    rows="3"
                   />
                 </div>
               </div>

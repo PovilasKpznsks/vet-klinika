@@ -7,12 +7,10 @@ const AdminVets = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    specialty: "",
-    licenseNumber: "",
+    gimimo_data: "",
+    pareigos: "",
+    el_pastas: "",
+    kaina: "",
   });
 
   useEffect(() => {
@@ -34,33 +32,27 @@ const AdminVets = () => {
   const mockVets = () => [
     {
       id: 1,
-      firstName: "Petras",
-      lastName: "Petraitis",
-      email: "vet1@email.com",
-      phone: "+37060000001",
-      specialty: "Chirurgas",
-      licenseNumber: "LIC-001",
+      gimimo_data: "1985-05-15",
+      pareigos: "Chirurgas",
+      el_pastas: "vet1@email.com",
+      kaina: 50.0,
     },
     {
       id: 2,
-      firstName: "Ana",
-      lastName: "Kazlienė",
-      email: "vet2@email.com",
-      phone: "+37060000002",
-      specialty: "Kardiologas",
-      licenseNumber: "LIC-002",
+      gimimo_data: "1990-03-22",
+      pareigos: "Kardiologas",
+      el_pastas: "vet2@email.com",
+      kaina: 60.0,
     },
   ];
 
   const startCreate = () => {
     setEditingId(null);
     setForm({
-      firstName: "",
-      lastName: "",
-      email: "",
-      phone: "",
-      specialty: "",
-      licenseNumber: "",
+      gimimo_data: "",
+      pareigos: "",
+      el_pastas: "",
+      kaina: "",
     });
     setShowForm(true);
   };
@@ -92,12 +84,10 @@ const AdminVets = () => {
       setShowForm(false);
       setEditingId(null);
       setForm({
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-        specialty: "",
-        licenseNumber: "",
+        gimimo_data: "",
+        pareigos: "",
+        el_pastas: "",
+        kaina: "",
       });
     } catch {}
   };
@@ -132,22 +122,18 @@ const AdminVets = () => {
               <div className="pet-card-header">
                 <div className="pet-avatar">🩺</div>
                 <div className="pet-info">
-                  <h4>
-                    {v.firstName} {v.lastName}
-                  </h4>
-                  <p>
-                    {v.specialty} • {v.licenseNumber}
-                  </p>
+                  <h4>{v.el_pastas}</h4>
+                  <p>{v.pareigos}</p>
                 </div>
               </div>
               <div className="pet-details">
                 <div className="detail-row">
-                  <span className="label">El. paštas:</span>
-                  <span>{v.email}</span>
+                  <span className="label">Gimimo data:</span>
+                  <span>{v.gimimo_data}</span>
                 </div>
                 <div className="detail-row">
-                  <span className="label">Telefonas:</span>
-                  <span>{v.phone}</span>
+                  <span className="label">Kaina:</span>
+                  <span>{v.kaina} €</span>
                 </div>
               </div>
               <div className="pet-actions">
@@ -183,23 +169,25 @@ const AdminVets = () => {
             <form className="pet-form" onSubmit={save}>
               <div className="form-grid">
                 <div className="form-group">
-                  <label>Vardas*</label>
+                  <label>Gimimo data*</label>
                   <input
+                    type="date"
                     required
-                    value={form.firstName}
+                    value={form.gimimo_data}
                     onChange={(e) =>
-                      setForm({ ...form, firstName: e.target.value })
+                      setForm({ ...form, gimimo_data: e.target.value })
                     }
                   />
                 </div>
                 <div className="form-group">
-                  <label>Pavardė*</label>
+                  <label>Pareigos*</label>
                   <input
                     required
-                    value={form.lastName}
+                    value={form.pareigos}
                     onChange={(e) =>
-                      setForm({ ...form, lastName: e.target.value })
+                      setForm({ ...form, pareigos: e.target.value })
                     }
+                    placeholder="Pvz.: Chirurgas"
                   />
                 </div>
                 <div className="form-group">
@@ -207,41 +195,23 @@ const AdminVets = () => {
                   <input
                     type="email"
                     required
-                    value={form.email}
+                    value={form.el_pastas}
                     onChange={(e) =>
-                      setForm({ ...form, email: e.target.value })
+                      setForm({ ...form, el_pastas: e.target.value })
                     }
                   />
                 </div>
                 <div className="form-group">
-                  <label>Telefonas*</label>
+                  <label>Kaina (€)*</label>
                   <input
-                    type="tel"
+                    type="number"
+                    step="0.01"
                     required
-                    value={form.phone}
+                    value={form.kaina}
                     onChange={(e) =>
-                      setForm({ ...form, phone: e.target.value })
+                      setForm({ ...form, kaina: e.target.value })
                     }
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Specializacija*</label>
-                  <input
-                    required
-                    value={form.specialty}
-                    onChange={(e) =>
-                      setForm({ ...form, specialty: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Licencijos nr.*</label>
-                  <input
-                    required
-                    value={form.licenseNumber}
-                    onChange={(e) =>
-                      setForm({ ...form, licenseNumber: e.target.value })
-                    }
+                    placeholder="50.00"
                   />
                 </div>
               </div>
