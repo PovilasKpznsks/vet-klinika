@@ -42,6 +42,9 @@ const Products = () => {
     manufacturer: ''
   })
   const [saving, setSaving] = useState(false)
+  const [imageFile, setImageFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
+  const [uploading, setUploading] = useState(false)
 
   // Check if user is admin
   const isAdmin = isAuthenticated && user?.role === ROLE_TYPES.Administrator
@@ -164,6 +167,8 @@ const Products = () => {
       photoUrl: '',
       manufacturer: ''
     })
+    setImageFile(null)
+    setImagePreview(null)
     setShowAddModal(true)
   }
 
@@ -177,6 +182,8 @@ const Products = () => {
       photoUrl: product.photoUrl || '',
       manufacturer: product.manufacturer || ''
     })
+    setImageFile(null)
+    setImagePreview(product.photoUrl ? getImageUrl(product.photoUrl) : null)
     setShowEditModal(true)
   }
 
@@ -212,13 +219,38 @@ const Products = () => {
 
     try {
       const token = getAuthToken()
+      let photoUrl = formData.photoUrl
+
+      // Upload image if file selected
+      if (imageFile) {
+        setUploading(true)
+        const uploadFormData = new FormData()
+        uploadFormData.append('file', imageFile)
+
+        const uploadResponse = await fetch('http://localhost:5068/api/Product/upload-image', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: uploadFormData
+        })
+
+        if (!uploadResponse.ok) {
+          throw new Error('Nepavyko įkelti nuotraukos')
+        }
+
+        const uploadResult = await uploadResponse.json()
+        photoUrl = uploadResult.photoUrl
+        setUploading(false)
+      }
+
       const response = await fetch('http://localhost:5068/api/Product', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, photoUrl })
       })
 
       if (!response.ok) {
@@ -226,12 +258,15 @@ const Products = () => {
       }
 
       setShowAddModal(false)
+      setImageFile(null)
+      setImagePreview(null)
       await fetchProducts()
       alert('Produktas sėkmingai pridėtas!')
     } catch (err) {
       alert('Klaida: ' + err.message)
     } finally {
       setSaving(false)
+      setUploading(false)
     }
   }
 
@@ -241,13 +276,38 @@ const Products = () => {
 
     try {
       const token = getAuthToken()
+      let photoUrl = formData.photoUrl
+
+      // Upload new image if file selected
+      if (imageFile) {
+        setUploading(true)
+        const uploadFormData = new FormData()
+        uploadFormData.append('file', imageFile)
+
+        const uploadResponse = await fetch('http://localhost:5068/api/Product/upload-image', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: uploadFormData
+        })
+
+        if (!uploadResponse.ok) {
+          throw new Error('Nepavyko įkelti nuotraukos')
+        }
+
+        const uploadResult = await uploadResponse.json()
+        photoUrl = uploadResult.photoUrl
+        setUploading(false)
+      }
+
       const response = await fetch(`http://localhost:5068/api/Product/${editingProduct.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, photoUrl })
       })
 
       if (!response.ok) {
@@ -256,10 +316,12 @@ const Products = () => {
 
       setShowEditModal(false)
       setEditingProduct(null)
+      setImageFile(null)
+      setImagePreview(null)
       await fetchProducts()
       
       if (selectedProduct?.id === editingProduct.id) {
-        setSelectedProduct({ ...editingProduct, ...formData })
+        setSelectedProduct({ ...editingProduct, ...formData, photoUrl })
       }
       
       alert('Produktas sėkmingai atnaujintas!')
@@ -267,6 +329,7 @@ const Products = () => {
       alert('Klaida: ' + err.message)
     } finally {
       setSaving(false)
+      setUploading(false)
     }
   }
 
@@ -276,6 +339,49 @@ const Products = () => {
       ...prev,
       [name]: name === 'type' ? parseInt(value) : value
     }))
+  }
+
+  // Handle image file selection
+  const handleImageChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+      if (!allowedTypes.includes(file.type)) {
+        alert('Netinkamas failo tipas. Leidžiami: JPG, PNG, GIF, WEBP')
+        return
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Failas per didelis. Maksimalus dydis: 5MB')
+        return
+      }
+      setImageFile(file)
+      // Create preview
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  // Remove selected image
+  const handleRemoveImage = () => {
+    setImageFile(null)
+    setImagePreview(null)
+    setFormData(prev => ({ ...prev, photoUrl: '' }))
+  }
+
+  // Helper to get full image URL
+  const getImageUrl = (photoUrl) => {
+    if (!photoUrl) return null
+    // If it's already a full URL, return as is
+    if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+      return photoUrl
+    }
+    // Otherwise, prepend the backend URL
+    return `http://localhost:5068${photoUrl}`
   }
 
   // Product Form Modal
@@ -331,15 +437,35 @@ const Products = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="photoUrl">Nuotraukos URL</label>
-            <input
-              type="url"
-              id="photoUrl"
-              name="photoUrl"
-              value={formData.photoUrl}
-              onChange={handleFormChange}
-              placeholder="https://example.com/image.jpg"
-            />
+            <label>Nuotrauka</label>
+            <div className="image-upload-container">
+              {imagePreview ? (
+                <div className="image-preview-wrapper">
+                  <img src={imagePreview} alt="Preview" className="image-preview" />
+                  <button 
+                    type="button" 
+                    className="btn-remove-image"
+                    onClick={handleRemoveImage}
+                  >
+                    ✕ Pašalinti
+                  </button>
+                </div>
+              ) : (
+                <label className="image-upload-label">
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    onChange={handleImageChange}
+                    className="image-upload-input"
+                  />
+                  <div className="image-upload-placeholder">
+                    <span className="upload-icon">📷</span>
+                    <span>Pasirinkite nuotrauką</span>
+                    <span className="upload-hint">JPG, PNG, GIF, WEBP (max 5MB)</span>
+                  </div>
+                </label>
+              )}
+            </div>
           </div>
 
           <div className="form-group">
@@ -358,8 +484,8 @@ const Products = () => {
             <button type="button" className="btn-cancel" onClick={onClose}>
               Atšaukti
             </button>
-            <button type="submit" className="btn-submit" disabled={saving}>
-              {saving ? 'Saugoma...' : (isEdit ? 'Atnaujinti' : 'Pridėti')}
+            <button type="submit" className="btn-submit" disabled={saving || uploading}>
+              {uploading ? 'Įkeliama nuotrauka...' : saving ? 'Saugoma...' : (isEdit ? 'Atnaujinti' : 'Pridėti')}
             </button>
           </div>
         </form>
@@ -430,8 +556,15 @@ const Products = () => {
 
           <div className="product-detail-window">
             <div className="product-detail-image">
-              {selectedProduct.photoUrl ? (
-                <img src={selectedProduct.photoUrl} alt={selectedProduct.name} />
+              {selectedProduct.photoUrl && selectedProduct.photoUrl.length > 0 ? (
+                <img 
+                  src={getImageUrl(selectedProduct.photoUrl)} 
+                  alt={selectedProduct.name}
+                  onError={(e) => {
+                    console.error('Image load error:', getImageUrl(selectedProduct.photoUrl))
+                    e.target.style.display = 'none'
+                  }}
+                />
               ) : (
                 <div className="no-image-large">📦</div>
               )}
@@ -563,8 +696,8 @@ const Products = () => {
                   onClick={() => handleSelectProduct(product)}
                 >
                   <div className="product-image">
-                    {product.photoUrl ? (
-                      <img src={product.photoUrl} alt={product.name} />
+                    {product.photoUrl && product.photoUrl.length > 0 ? (
+                      <img src={getImageUrl(product.photoUrl)} alt={product.name} />
                     ) : (
                       <div className="no-image">📦</div>
                     )}
