@@ -266,6 +266,15 @@ const Diseases = () => {
       <div className="diseases-header">
         <h2>Ligų duomenų bazė</h2>
         <p>Ieškokite informacijos apie ligas, jų simptomus ir gydymo metodus</p>
+        {isAdmin && (
+          <button
+            className="btn primary"
+            onClick={startCreate}
+            style={{ marginTop: "1rem" }}
+          >
+            + Pridėti ligą
+          </button>
+        )}
       </div>
 
       <div className="search-filters">
