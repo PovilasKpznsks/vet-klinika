@@ -1,211 +1,484 @@
 import { useState, useEffect } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 import '../styles/Products.css'
 
-// Mock produktų duomenys pagal veterinarijos klinikos specifiką
-const PRODUCTS_DATA = [
-  // Maistas ir vitaminai
-  {
-    id: 1,
-    name: 'Royal Canin Adult šunų maistas',
-    category: 'maistas',
-    price: 45.99,
-    image: '/api/placeholder/300/200',
-    description: 'Subalansuotas maistas suaugusiems šunims su visais reikalingais vitaminais.',
-    inStock: true,
-    stockCount: 25,
-    brand: 'Royal Canin',
-    weight: '15kg',
-    ageGroup: 'suaugę'
-  },
-  {
-    id: 2,
-    name: 'Hill\'s Science Diet kačių maistas',
-    category: 'maistas',
-    price: 32.50,
-    image: '/api/placeholder/300/200',
-    description: 'Specialiai sukurtas maistas kačiukams su omega rūgštimis.',
-    inStock: true,
-    stockCount: 18,
-    brand: 'Hill\'s',
-    weight: '10kg',
-    ageGroup: 'kačiukai'
-  },
-  {
-    id: 3,
-    name: 'Vitamin Complex šunims',
-    category: 'vitaminai',
-    price: 24.99,
-    image: '/api/placeholder/300/200',
-    description: 'Kompleksas vitaminų šunų imuniteto stiprinimui.',
-    inStock: true,
-    stockCount: 40,
-    brand: 'VetComplex',
-    dosage: '60 tablečių'
-  },
-  
-  // Vaistai ir preparatai
-  {
-    id: 4,
-    name: 'Frontline Combo blakių/erkių preparatas',
-    category: 'vaistai',
-    price: 18.75,
-    image: '/api/placeholder/300/200',
-    description: 'Efektyvus preparatas nuo blakių ir erkių šunims ir katėms.',
-    inStock: true,
-    stockCount: 30,
-    brand: 'Frontline',
-    application: 'lašai ant odos'
-  },
-  {
-    id: 5,
-    name: 'Metacam skausmą malšinantis preparatas',
-    category: 'vaistai',
-    price: 35.20,
-    image: '/api/placeholder/300/200',
-    description: 'Nesteroidinis vaistas nuo uždegimo ir skausmo šunims.',
-    inStock: false,
-    stockCount: 0,
-    brand: 'Boehringer Ingelheim',
-    prescription: true
-  },
-  {
-    id: 6,
-    name: 'Antibiotikai amoksicilinas',
-    category: 'vaistai',
-    price: 28.90,
-    image: '/api/placeholder/300/200',
-    description: 'Platus spektras antibiotikų infekcinėms ligoms gydyti.',
-    inStock: true,
-    stockCount: 15,
-    brand: 'VetPharm',
-    prescription: true
-  },
-  
-  // Priežiūros reikmenys
-  {
-    id: 7,
-    name: 'Šampūnas jautriai odai',
-    category: 'prieziura',
-    price: 16.45,
-    image: '/api/placeholder/300/200',
-    description: 'Specialus šampūnas gyvūnams su jautria oda.',
-    inStock: true,
-    stockCount: 22,
-    brand: 'Virbac',
-    volume: '250ml'
-  },
-  {
-    id: 8,
-    name: 'Dantų valymo rinkinys',
-    category: 'prieziura',
-    price: 12.30,
-    image: '/api/placeholder/300/200',
-    description: 'Dantų šepetėlis ir pasta šunų ir kačių dantų higienai.',
-    inStock: true,
-    stockCount: 35,
-    brand: 'DentaVet'
-  },
-  
-  // Reikmenys ir priedai
-  {
-    id: 9,
-    name: 'Veterinariniai pirštai lateksiniai',
-    category: 'reikmenys',
-    price: 8.99,
-    image: '/api/placeholder/300/200',
-    description: 'Sterilūs lateksiniai pirštai veterinariniams tyrimams.',
-    inStock: true,
-    stockCount: 50,
-    brand: 'MedVet',
-    quantity: '100 vnt.'
-  },
-  {
-    id: 10,
-    name: 'Švirštas 5ml',
-    category: 'reikmenys',
-    price: 2.45,
-    image: '/api/placeholder/300/200',
-    description: 'Vienkartiniai švirkštai vakcinoms ir vaistams.',
-    inStock: true,
-    stockCount: 200,
-    brand: 'VetSupply',
-    sterile: true
-  }
+// Categories mapped from ProductType enum
+const CATEGORIES = [
+  { id: 'visi', name: 'Visi produktai', icon: '🏥', type: null },
+  { id: 'Food', name: 'Maistas', icon: '🥘', type: 0 },
+  { id: 'Supplements', name: 'Papildai', icon: '💊', type: 1 },
+  { id: 'Hygiene', name: 'Higiena', icon: '🧴', type: 2 },
+  { id: 'Medicine', name: 'Vaistai', icon: '💉', type: 3 }
 ]
 
-const CATEGORIES = [
-  { id: 'visi', name: 'Visi produktai', icon: '🏥' },
-  { id: 'maistas', name: 'Maistas', icon: '🥘' },
-  { id: 'vitaminai', name: 'Vitaminai', icon: '💊' },
-  { id: 'vaistai', name: 'Vaistai', icon: '💉' },
-  { id: 'prieziura', name: 'Priežiūra', icon: '🧴' },
-  { id: 'reikmenys', name: 'Reikmenys', icon: '🔬' }
-]
+// Role types matching backend enum
+const ROLE_TYPES = {
+  Administrator: 0,
+  Veterinarian: 1,
+  Client: 2
+}
 
 const Products = () => {
-  const [products, setProducts] = useState(PRODUCTS_DATA)
-  const [filteredProducts, setFilteredProducts] = useState(PRODUCTS_DATA)
+  const { user, isAuthenticated } = useAuth()
+  const [products, setProducts] = useState([])
+  const [filteredProducts, setFilteredProducts] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('visi')
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('name')
-  const [showOnlyInStock, setShowOnlyInStock] = useState(false)
-  const [priceRange, setPriceRange] = useState({ min: 0, max: 100 })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [selectedProduct, setSelectedProduct] = useState(null)
+  const [productIdFromUrl, setProductIdFromUrl] = useState(null)
+  
+  // Admin state
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingProduct, setEditingProduct] = useState(null)
+  const [formData, setFormData] = useState({
+    name: '',
+    type: 0,
+    description: '',
+    photoUrl: '',
+    manufacturer: ''
+  })
+  const [saving, setSaving] = useState(false)
 
-  // Filtruoti produktus
+  // Check if user is admin
+  const isAdmin = isAuthenticated && user?.role === ROLE_TYPES.Administrator
+
+  // Get auth token
+  const getAuthToken = () => {
+    return localStorage.getItem('auth_token')
+  }
+
+  // Check URL for product ID on mount and handle browser back/forward
+  useEffect(() => {
+    const checkUrlForProduct = () => {
+      const params = new URLSearchParams(window.location.search)
+      const productId = params.get('product')
+      setProductIdFromUrl(productId)
+    }
+
+    checkUrlForProduct()
+
+    // Listen for browser back/forward navigation
+    window.addEventListener('popstate', checkUrlForProduct)
+    return () => window.removeEventListener('popstate', checkUrlForProduct)
+  }, [])
+
+  // When products are loaded and there's a product ID in URL, select that product
+  useEffect(() => {
+    if (productIdFromUrl && products.length > 0) {
+      const product = products.find(p => p.id === productIdFromUrl)
+      if (product) {
+        setSelectedProduct(product)
+      }
+    }
+  }, [productIdFromUrl, products])
+
+  // Handle selecting a product - update URL
+  const handleSelectProduct = (product) => {
+    setSelectedProduct(product)
+    const newUrl = `${window.location.pathname}?product=${product.id}`
+    window.history.pushState({ productId: product.id }, '', newUrl)
+  }
+
+  // Handle going back to product list - update URL
+  const handleBackToList = () => {
+    setSelectedProduct(null)
+    window.history.pushState({}, '', window.location.pathname)
+  }
+
+  // Fetch products from API
+  const fetchProducts = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('http://localhost:5068/api/Product')
+      if (!response.ok) {
+        throw new Error('Nepavyko gauti produktų')
+      }
+      const data = await response.json()
+      setProducts(data)
+      setFilteredProducts(data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchProducts()
+  }, [])
+
+  // Get ProductType name from enum value
+  const getTypeName = (typeValue) => {
+    const category = CATEGORIES.find(c => c.type === typeValue)
+    return category ? category.name : 'Kita'
+  }
+
+  // Filter products
   useEffect(() => {
     let filtered = [...products]
 
-    // Filtruoti pagal kategoriją
+    // Filter by category
     if (selectedCategory !== 'visi') {
-      filtered = filtered.filter(product => product.category === selectedCategory)
+      const category = CATEGORIES.find(c => c.id === selectedCategory)
+      if (category) {
+        filtered = filtered.filter(product => product.type === category.type)
+      }
     }
 
-    // Filtruoti pagal paiešką
+    // Filter by search
     if (searchTerm) {
       filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.brand.toLowerCase().includes(searchTerm.toLowerCase())
+        product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.manufacturer?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
 
-    // Filtruoti pagal likutį sandėlyje
-    if (showOnlyInStock) {
-      filtered = filtered.filter(product => product.inStock && product.stockCount > 0)
-    }
-
-    // Filtruoti pagal kainą
-    filtered = filtered.filter(product => 
-      product.price >= priceRange.min && product.price <= priceRange.max
-    )
-
-    // Rūšiuoti
+    // Sort
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'name':
-          return a.name.localeCompare(b.name)
-        case 'price-asc':
-          return a.price - b.price
-        case 'price-desc':
-          return b.price - a.price
-        case 'brand':
-          return a.brand.localeCompare(b.brand)
+          return (a.name || '').localeCompare(b.name || '')
+        case 'manufacturer':
+          return (a.manufacturer || '').localeCompare(b.manufacturer || '')
+        case 'type':
+          return (a.type || 0) - (b.type || 0)
         default:
           return 0
       }
     })
 
     setFilteredProducts(filtered)
-  }, [products, selectedCategory, searchTerm, sortBy, showOnlyInStock, priceRange])
+  }, [products, selectedCategory, searchTerm, sortBy])
 
-  const handleAddToCart = (product) => {
-    // Čia būtų logika prekės pridėjimui į krepšelį
-    alert(`Produktas "${product.name}" pridėtas į krepšelį!`)
+  // Admin functions
+  const handleAddProduct = () => {
+    setFormData({
+      name: '',
+      type: 0,
+      description: '',
+      photoUrl: '',
+      manufacturer: ''
+    })
+    setShowAddModal(true)
   }
 
-  const handleRequestQuote = (product) => {
-    // Čia būtų logika kainos užklausos siuntimui
-    alert(`Kainos užklausa produktui "${product.name}" išsiųsta!`)
+  const handleEditProduct = (product, e) => {
+    e.stopPropagation()
+    setEditingProduct(product)
+    setFormData({
+      name: product.name || '',
+      type: product.type || 0,
+      description: product.description || '',
+      photoUrl: product.photoUrl || '',
+      manufacturer: product.manufacturer || ''
+    })
+    setShowEditModal(true)
+  }
+
+  const handleDeleteProduct = async (product, e) => {
+    e.stopPropagation()
+    if (!window.confirm(`Ar tikrai norite ištrinti produktą "${product.name}"?`)) {
+      return
+    }
+
+    try {
+      const token = getAuthToken()
+      const response = await fetch(`http://localhost:5068/api/Product/${product.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Nepavyko ištrinti produkto')
+      }
+
+      await fetchProducts()
+      alert('Produktas sėkmingai ištrintas!')
+    } catch (err) {
+      alert('Klaida: ' + err.message)
+    }
+  }
+
+  const handleSubmitAdd = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+
+    try {
+      const token = getAuthToken()
+      const response = await fetch('http://localhost:5068/api/Product', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      })
+
+      if (!response.ok) {
+        throw new Error('Nepavyko pridėti produkto')
+      }
+
+      setShowAddModal(false)
+      await fetchProducts()
+      alert('Produktas sėkmingai pridėtas!')
+    } catch (err) {
+      alert('Klaida: ' + err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSubmitEdit = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+
+    try {
+      const token = getAuthToken()
+      const response = await fetch(`http://localhost:5068/api/Product/${editingProduct.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      })
+
+      if (!response.ok) {
+        throw new Error('Nepavyko atnaujinti produkto')
+      }
+
+      setShowEditModal(false)
+      setEditingProduct(null)
+      await fetchProducts()
+      
+      if (selectedProduct?.id === editingProduct.id) {
+        setSelectedProduct({ ...editingProduct, ...formData })
+      }
+      
+      alert('Produktas sėkmingai atnaujintas!')
+    } catch (err) {
+      alert('Klaida: ' + err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleFormChange = (e) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'type' ? parseInt(value) : value
+    }))
+  }
+
+  // Product Form Modal
+  const ProductFormModal = ({ isEdit, onSubmit, onClose }) => (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>{isEdit ? 'Redaguoti produktą' : 'Pridėti naują produktą'}</h2>
+          <button className="modal-close-btn" onClick={onClose}>×</button>
+        </div>
+        
+        <form onSubmit={onSubmit} className="product-form">
+          <div className="form-group">
+            <label htmlFor="name">Pavadinimas *</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleFormChange}
+              required
+              placeholder="Įveskite produkto pavadinimą"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="type">Kategorija *</label>
+            <select
+              id="type"
+              name="type"
+              value={formData.type}
+              onChange={handleFormChange}
+              required
+            >
+              {CATEGORIES.filter(c => c.type !== null).map(cat => (
+                <option key={cat.id} value={cat.type}>
+                  {cat.icon} {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="manufacturer">Gamintojas</label>
+            <input
+              type="text"
+              id="manufacturer"
+              name="manufacturer"
+              value={formData.manufacturer}
+              onChange={handleFormChange}
+              placeholder="Įveskite gamintojo pavadinimą"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="photoUrl">Nuotraukos URL</label>
+            <input
+              type="url"
+              id="photoUrl"
+              name="photoUrl"
+              value={formData.photoUrl}
+              onChange={handleFormChange}
+              placeholder="https://example.com/image.jpg"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="description">Aprašymas</label>
+            <textarea
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleFormChange}
+              rows="4"
+              placeholder="Įveskite produkto aprašymą"
+            />
+          </div>
+
+          <div className="form-actions">
+            <button type="button" className="btn-cancel" onClick={onClose}>
+              Atšaukti
+            </button>
+            <button type="submit" className="btn-submit" disabled={saving}>
+              {saving ? 'Saugoma...' : (isEdit ? 'Atnaujinti' : 'Pridėti')}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+
+  if (loading) {
+    return (
+      <div className="products-page">
+        <div className="loading-container">
+          <div className="spinner"></div>
+          <p>Kraunami produktai...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="products-page">
+        <div className="error-container">
+          <h3>Klaida</h3>
+          <p>{error}</p>
+          <button onClick={() => window.location.reload()}>Bandyti dar kartą</button>
+        </div>
+      </div>
+    )
+  }
+
+  // Product Detail View
+  if (selectedProduct) {
+    return (
+      <div className="products-page">
+        <div className="products-header">
+          <div className="container">
+            <h1>Produkto informacija</h1>
+            <p>Išsami informacija apie pasirinktą produktą</p>
+          </div>
+        </div>
+
+        <div className="container">
+          <div className="detail-actions-row">
+            <button className="back-button" onClick={handleBackToList}>
+              ← Grįžti į produktų sąrašą
+            </button>
+            
+            {isAdmin && (
+              <div className="admin-detail-actions">
+                <button 
+                  className="btn-edit"
+                  onClick={(e) => handleEditProduct(selectedProduct, e)}
+                >
+                  ✏️ Redaguoti
+                </button>
+                <button 
+                  className="btn-delete"
+                  onClick={(e) => {
+                    handleDeleteProduct(selectedProduct, e)
+                    handleBackToList()
+                  }}
+                >
+                  🗑️ Ištrinti
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="product-detail-window">
+            <div className="product-detail-image">
+              {selectedProduct.photoUrl ? (
+                <img src={selectedProduct.photoUrl} alt={selectedProduct.name} />
+              ) : (
+                <div className="no-image-large">📦</div>
+              )}
+            </div>
+
+            <div className="product-detail-info">
+              <span className="detail-type-badge">
+                {CATEGORIES.find(c => c.type === selectedProduct.type)?.icon} {getTypeName(selectedProduct.type)}
+              </span>
+
+              <h1 className="detail-title">{selectedProduct.name}</h1>
+
+              {selectedProduct.manufacturer && (
+                <div className="detail-row">
+                  <span className="detail-label">Gamintojas:</span>
+                  <span className="detail-value">{selectedProduct.manufacturer}</span>
+                </div>
+              )}
+
+              <div className="detail-row">
+                <span className="detail-label">Kategorija:</span>
+                <span className="detail-value">{getTypeName(selectedProduct.type)}</span>
+              </div>
+
+              {selectedProduct.description && (
+                <div className="detail-description">
+                  <h3>Aprašymas</h3>
+                  <p>{selectedProduct.description}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Edit Modal */}
+        {showEditModal && (
+          <ProductFormModal
+            isEdit={true}
+            onSubmit={handleSubmitEdit}
+            onClose={() => {
+              setShowEditModal(false)
+              setEditingProduct(null)
+            }}
+          />
+        )}
+      </div>
+    )
   }
 
   return (
@@ -219,7 +492,7 @@ const Products = () => {
 
       <div className="container">
         <div className="products-controls">
-          {/* Paieška */}
+          {/* Search */}
           <div className="search-section">
             <div className="search-box">
               <input
@@ -233,53 +506,27 @@ const Products = () => {
             </div>
           </div>
 
-          {/* Filtrai */}
+          {/* Filters and Admin Button */}
           <div className="filters-section">
             <div className="filter-group">
               <label>Rūšiuoti pagal:</label>
               <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
                 <option value="name">Pavadinimą</option>
-                <option value="price-asc">Kainą (mažėjimo tvarka)</option>
-                <option value="price-desc">Kainą (didėjimo tvarka)</option>
-                <option value="brand">Prekės ženklą</option>
+                <option value="manufacturer">Gamintoją</option>
+                <option value="type">Kategoriją</option>
               </select>
             </div>
 
-            <div className="filter-group">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={showOnlyInStock}
-                  onChange={(e) => setShowOnlyInStock(e.target.checked)}
-                />
-                Tik sandėlyje esantys
-              </label>
-            </div>
-
-            <div className="filter-group price-range">
-              <label>Kaina: €{priceRange.min} - €{priceRange.max}</label>
-              <div className="range-inputs">
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={priceRange.min}
-                  onChange={(e) => setPriceRange({...priceRange, min: parseInt(e.target.value)})}
-                />
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={priceRange.max}
-                  onChange={(e) => setPriceRange({...priceRange, max: parseInt(e.target.value)})}
-                />
-              </div>
-            </div>
+            {isAdmin && (
+              <button className="btn-add-product" onClick={handleAddProduct}>
+                ➕ Pridėti produktą
+              </button>
+            )}
           </div>
         </div>
 
         <div className="products-content">
-          {/* Kategorijų meniu */}
+          {/* Categories sidebar */}
           <div className="categories-sidebar">
             <h3>Kategorijos</h3>
             <div className="categories-list">
@@ -292,14 +539,16 @@ const Products = () => {
                   <span className="category-icon">{category.icon}</span>
                   <span className="category-name">{category.name}</span>
                   <span className="category-count">
-                    ({category.id === 'visi' ? products.length : products.filter(p => p.category === category.id).length})
+                    ({category.id === 'visi' 
+                      ? products.length 
+                      : products.filter(p => p.type === category.type).length})
                   </span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Produktų sąrašas */}
+          {/* Products list */}
           <div className="products-grid">
             {filteredProducts.length === 0 ? (
               <div className="no-products">
@@ -308,50 +557,53 @@ const Products = () => {
               </div>
             ) : (
               filteredProducts.map(product => (
-                <div key={product.id} className={`product-card ${!product.inStock ? 'out-of-stock' : ''}`}>
+                <div 
+                  key={product.id} 
+                  className="product-card clickable"
+                  onClick={() => handleSelectProduct(product)}
+                >
                   <div className="product-image">
-                    <img src={product.image} alt={product.name} />
-                    {!product.inStock && <div className="stock-badge">Nėra sandėlyje</div>}
-                    {product.prescription && <div className="prescription-badge">Pagal receptą</div>}
+                    {product.photoUrl ? (
+                      <img src={product.photoUrl} alt={product.name} />
+                    ) : (
+                      <div className="no-image">📦</div>
+                    )}
+                    <div className="type-badge">{getTypeName(product.type)}</div>
+                    
+                    {/* Admin action buttons on card */}
+                    {isAdmin && (
+                      <div className="card-admin-actions">
+                        <button 
+                          className="card-btn edit"
+                          onClick={(e) => handleEditProduct(product, e)}
+                          title="Redaguoti"
+                        >
+                          ✏️
+                        </button>
+                        <button 
+                          className="card-btn delete"
+                          onClick={(e) => handleDeleteProduct(product, e)}
+                          title="Ištrinti"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="product-info">
                     <h3 className="product-name">{product.name}</h3>
-                    <p className="product-brand">{product.brand}</p>
-                    <p className="product-description">{product.description}</p>
-
-                    <div className="product-details">
-                      {product.weight && <span className="detail">📦 {product.weight}</span>}
-                      {product.volume && <span className="detail">📦 {product.volume}</span>}
-                      {product.quantity && <span className="detail">📦 {product.quantity}</span>}
-                      {product.dosage && <span className="detail">💊 {product.dosage}</span>}
-                    </div>
+                    {product.manufacturer && (
+                      <p className="product-brand">{product.manufacturer}</p>
+                    )}
+                    {product.description && (
+                      <p className="product-description">{product.description}</p>
+                    )}
 
                     <div className="product-footer">
-                      <div className="price-section">
-                        <span className="price">€{product.price.toFixed(2)}</span>
-                        {product.inStock && (
-                          <span className="stock-info">Sandėlyje: {product.stockCount}</span>
-                        )}
-                      </div>
-
-                      <div className="product-actions">
-                        {product.inStock ? (
-                          <button 
-                            className="btn primary"
-                            onClick={() => handleAddToCart(product)}
-                          >
-                            Į krepšelį
-                          </button>
-                        ) : (
-                          <button 
-                            className="btn secondary"
-                            onClick={() => handleRequestQuote(product)}
-                          >
-                            Užklausti
-                          </button>
-                        )}
-                      </div>
+                      <span className="product-type-tag">
+                        {CATEGORIES.find(c => c.type === product.type)?.icon} {getTypeName(product.type)}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -360,7 +612,7 @@ const Products = () => {
           </div>
         </div>
 
-        {/* Statistika */}
+        {/* Statistics */}
         <div className="products-stats">
           <div className="stats-grid">
             <div className="stat-item">
@@ -368,20 +620,37 @@ const Products = () => {
               <span className="stat-label">Produktai</span>
             </div>
             <div className="stat-item">
-              <span className="stat-number">{filteredProducts.filter(p => p.inStock).length}</span>
-              <span className="stat-label">Sandėlyje</span>
-            </div>
-            <div className="stat-item">
               <span className="stat-number">{CATEGORIES.length - 1}</span>
               <span className="stat-label">Kategorijos</span>
             </div>
             <div className="stat-item">
-              <span className="stat-number">{new Set(products.map(p => p.brand)).size}</span>
-              <span className="stat-label">Prekės ženklai</span>
+              <span className="stat-number">{new Set(products.map(p => p.manufacturer).filter(Boolean)).size}</span>
+              <span className="stat-label">Gamintojai</span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Add Modal */}
+      {showAddModal && (
+        <ProductFormModal
+          isEdit={false}
+          onSubmit={handleSubmitAdd}
+          onClose={() => setShowAddModal(false)}
+        />
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <ProductFormModal
+          isEdit={true}
+          onSubmit={handleSubmitEdit}
+          onClose={() => {
+            setShowEditModal(false)
+            setEditingProduct(null)
+          }}
+        />
+      )}
     </div>
   )
 }

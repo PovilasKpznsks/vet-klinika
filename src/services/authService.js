@@ -1,24 +1,43 @@
 import apiClient from './api'
 
+// Role types matching backend enum
+const ROLE_TYPES = {
+  Administrator: 0,
+  Veterinarian: 1,
+  Client: 2
+}
+
 // Laikini testavimo duomenys (kai backend'as neveikia)
 const MOCK_USERS = [
   {
     id: 1,
+    firstName: 'Admin',
+    lastName: 'Administratorius',
+    email: 'admin@email.com',
+    phone: '+370 600 00000',
+    personalCode: '37001010000',
+    password: 'admin123',
+    role: ROLE_TYPES.Administrator
+  },
+  {
+    id: 2,
     firstName: 'Jonas',
     lastName: 'Jonaitis',
     email: 'jonas@email.com',
     phone: '+370 600 00001',
     personalCode: '38001010000',
-    password: '123456'
+    password: '123456',
+    role: ROLE_TYPES.Client
   },
   {
-    id: 2,
+    id: 3,
     firstName: 'Petras',
     lastName: 'Petraitis', 
     email: 'petras@email.com',
     phone: '+370 600 00002',
     personalCode: '39001010000',
-    password: 'Slaptazodis1'
+    password: 'Slaptazodis1',
+    role: ROLE_TYPES.Veterinarian
   }
 ]
 
@@ -50,7 +69,8 @@ export const authService = {
                 lastName: user.lastName,
                 email: user.email,
                 phone: user.phone,
-                personalCode: user.personalCode
+                personalCode: user.personalCode,
+                role: user.role
               }
             })
           } else {

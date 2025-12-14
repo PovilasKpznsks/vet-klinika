@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import Header from './components/Header'
 import Navbar from './components/Navbar'
 import NotificationContainer from './components/NotificationContainer'
+import Chatbot from './components/Chatbot'
 import Home from './pages/Home'
 import Account from './pages/Account'
 import Diseases from './pages/Diseases'
@@ -15,6 +16,14 @@ import './styles/App.css'
 const AppContent = () => {
   const [currentPage, setCurrentPage] = useState('home')
   const { isAuthenticated, loading, user, login, register, logout } = useAuth()
+
+  // Check URL for product parameter on mount - redirect to products page if present
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('product')) {
+      setCurrentPage('products')
+    }
+  }, [])
 
   // Handle successful authentication
   const handleAuthSuccess = async (userData) => {
@@ -72,6 +81,7 @@ const AppContent = () => {
         {renderPage()}
       </main>
       <NotificationContainer />
+      <Chatbot />
     </div>
   )
 }
