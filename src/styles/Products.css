@@ -361,8 +361,12 @@
   transition: transform 0.3s ease;
 }
 
+
+/* Fix: Only scale image on hover, do not change brightness or opacity */
 .product-card:hover .product-image img {
   transform: scale(1.05);
+  filter: none !important;
+  opacity: 1 !important;
 }
 
 .stock-badge, .prescription-badge {
@@ -676,14 +680,18 @@
   align-items: center;
   justify-content: center;
   min-height: 400px;
+  overflow: hidden;
 }
 
 .product-detail-image img {
+  width: auto;
+  height: auto;
   max-width: 100%;
   max-height: 450px;
   object-fit: contain;
   border-radius: 12px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  display: block;
 }
 
 .no-image-large {
@@ -1101,4 +1109,82 @@
   .admin-detail-actions {
     justify-content: center;
   }
+}
+
+/* Image Upload Styles */
+.image-upload-container {
+  width: 100%;
+}
+
+.image-upload-label {
+  display: block;
+  cursor: pointer;
+}
+
+.image-upload-input {
+  display: none;
+}
+
+.image-upload-placeholder {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  background: #f8fafc;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.image-upload-placeholder:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.upload-icon {
+  font-size: 2.5rem;
+}
+
+.image-upload-placeholder span {
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.upload-hint {
+  font-size: 0.8rem !important;
+  color: #94a3b8 !important;
+}
+
+.image-preview-wrapper {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f1f5f9;
+}
+
+.image-preview {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  display: block;
+}
+
+.btn-remove-image {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-remove-image:hover {
+  background: #dc2626;
 }
