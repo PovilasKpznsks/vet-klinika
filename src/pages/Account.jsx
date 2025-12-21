@@ -19,7 +19,6 @@ const Account = () => {
     lastName: "",
     email: "",
     phone: "",
-    address: "",
     birthDate: "",
 
     // Sistemos nustatymai
@@ -33,21 +32,19 @@ const Account = () => {
   const [editingPet, setEditingPet] = useState(null);
   const [expandedPetDetails, setExpandedPetDetails] = useState({});
   const [showIllnessForm, setShowIllnessForm] = useState(false);
-  const [showVisitForm, setShowVisitForm] = useState(false);
+  const [showVaccinationForm, setShowVaccinationForm] = useState(false);
   const [selectedPetForRecord, setSelectedPetForRecord] = useState(null);
   const [editingIllness, setEditingIllness] = useState(null);
-  const [editingVisit, setEditingVisit] = useState(null);
+  const [editingVaccination, setEditingVaccination] = useState(null);
   const [newIllness, setNewIllness] = useState({
     name: "",
     description: "",
     dateDiagnosed: "",
   });
-  const [newVisit, setNewVisit] = useState({
-    type: 0,
-    start: "",
-    end: "",
-    location: "",
-    price: "",
+  const [newVaccination, setNewVaccination] = useState({
+    name: "",
+    description: "",
+    dateAdministered: "",
   });
   const [newPet, setNewPet] = useState({
     name: "",
@@ -74,7 +71,6 @@ const Account = () => {
         lastName: user.lastName || "",
         email: user.email || "",
         phone: user.phone || "",
-        address: user.address || "",
         birthDate: user.birthDate || "",
       }));
     }
@@ -121,7 +117,6 @@ const Account = () => {
     personalCode: user?.personalCode || "",
     email: user?.email || "",
     phone: user?.phone || "",
-    address: user?.address || "",
     birthDate: user?.birthDate || "",
     notifications: true,
     language: "lt",
@@ -147,6 +142,14 @@ const Account = () => {
           dateDiagnosed: "2023-08-15",
         },
       ],
+      vaccinations: [
+        {
+          id: 1,
+          name: "Pasiutligės vakcina",
+          description: "Metinė pasiutligės vakcina",
+          dateAdministered: "2024-03-15",
+        },
+      ],
       visits: [
         {
           id: 1,
@@ -169,7 +172,7 @@ const Account = () => {
       dateOfBirth: "2019-03-20",
       weight: 4.5,
       illnesses: [],
-      visits: [],
+      vaccinations: [],
     },
   ];
 
@@ -389,22 +392,9 @@ const Account = () => {
     setNewIllness({
       name: "",
       description: "",
-      dateDiagnosed: new Date().toISOString().split("T")[0],
+      dateDiagnosed: "",
     });
     setShowIllnessForm(true);
-  };
-
-  const handleAddVisit = (petId) => {
-    setSelectedPetForRecord(petId);
-    setEditingVisit(null);
-    setNewVisit({
-      type: 0,
-      start: "",
-      end: "",
-      location: "",
-      price: "",
-    });
-    setShowVisitForm(true);
   };
 
   const handleSaveIllness = (e) => {
@@ -439,47 +429,6 @@ const Account = () => {
     );
   };
 
-  const handleSaveVisit = (e) => {
-    e.preventDefault();
-    setPets(
-      pets.map((pet) => {
-        if (pet.id === selectedPetForRecord) {
-          const visits = pet.visits || [];
-          if (editingVisit) {
-            // Update existing visit
-            return {
-              ...pet,
-              visits: visits.map((vis) =>
-                vis.id === editingVisit.id
-                  ? { ...vis, ...newVisit, price: parseFloat(newVisit.price) }
-                  : vis
-              ),
-            };
-          } else {
-            // Add new visit
-            return {
-              ...pet,
-              visits: [
-                ...visits,
-                {
-                  id: Date.now(),
-                  ...newVisit,
-                  price: parseFloat(newVisit.price),
-                },
-              ],
-            };
-          }
-        }
-        return pet;
-      })
-    );
-    setShowVisitForm(false);
-    setEditingVisit(null);
-    notificationService.addSuccess(
-      editingVisit ? "Vizitas atnaujintas" : "Vizitas sėkmingai pridėtas"
-    );
-  };
-
   const handleEditIllness = (petId, illness) => {
     setSelectedPetForRecord(petId);
     setEditingIllness(illness);
@@ -492,7 +441,7 @@ const Account = () => {
   };
 
   const handleDeleteIllness = (petId, illnessId) => {
-    if (!confirm("Ar tikrai norite pašalinti šį ligos įrašą?")) {
+    if (!confirm("Ar tikrai norite pašalinti šį sirgimo įrašą?")) {
       return;
     }
     setPets(
@@ -511,26 +460,68 @@ const Account = () => {
     notificationService.addSuccess("Liga pašalinta");
   };
 
-  const handleEditVisit = (petId, visit) => {
+  const handleAddVaccination = (petId) => {
     setSelectedPetForRecord(petId);
-    setEditingVisit(visit);
-    // Format datetime for input
-    const formatDateTime = (dateStr) => {
-      const date = new Date(dateStr);
-      return date.toISOString().slice(0, 16);
-    };
-    setNewVisit({
-      type: visit.type,
-      start: formatDateTime(visit.start),
-      end: formatDateTime(visit.end),
-      location: visit.location,
-      price: visit.price.toString(),
+    setEditingVaccination(null);
+    setNewVaccination({
+      name: "",
+      description: "",
+      dateAdministered: "",
     });
-    setShowVisitForm(true);
+    setShowVaccinationForm(true);
   };
 
-  const handleDeleteVisit = (petId, visitId) => {
-    if (!confirm("Ar tikrai norite pašalinti šį vizito įrašą?")) {
+  const handleSaveVaccination = (e) => {
+    e.preventDefault();
+    const vaccinationData = {
+      id: editingVaccination ? editingVaccination.id : Date.now(),
+      ...newVaccination,
+    };
+
+    setPets(
+      pets.map((pet) => {
+        if (pet.id === selectedPetForRecord) {
+          const vaccinations = pet.vaccinations || [];
+          if (editingVaccination) {
+            return {
+              ...pet,
+              vaccinations: vaccinations.map((vac) =>
+                vac.id === editingVaccination.id ? vaccinationData : vac
+              ),
+            };
+          } else {
+            return {
+              ...pet,
+              vaccinations: [...vaccinations, vaccinationData],
+            };
+          }
+        }
+        return pet;
+      })
+    );
+
+    setShowVaccinationForm(false);
+    setNewVaccination({ name: "", description: "", dateAdministered: "" });
+    setSelectedPetForRecord(null);
+    setEditingVaccination(null);
+    notificationService.addSuccess(
+      editingVaccination ? "Skiepas atnaujintas" : "Skiepas sėkmingai pridėtas"
+    );
+  };
+
+  const handleEditVaccination = (petId, vaccination) => {
+    setSelectedPetForRecord(petId);
+    setEditingVaccination(vaccination);
+    setNewVaccination({
+      name: vaccination.name,
+      description: vaccination.description,
+      dateAdministered: vaccination.dateAdministered,
+    });
+    setShowVaccinationForm(true);
+  };
+
+  const handleDeleteVaccination = (petId, vaccinationId) => {
+    if (!confirm("Ar tikrai norite pašalinti šį skiepo įrašą?")) {
       return;
     }
     setPets(
@@ -538,14 +529,27 @@ const Account = () => {
         if (pet.id === petId) {
           return {
             ...pet,
-            visits: (pet.visits || []).filter((vis) => vis.id !== visitId),
+            vaccinations: (pet.vaccinations || []).filter(
+              (vac) => vac.id !== vaccinationId
+            ),
           };
         }
         return pet;
       })
     );
-    notificationService.addSuccess("Vizitas pašalintas");
+    notificationService.addSuccess("Skiepas pašalintas");
   };
+
+  // Loading state
+  if (loading && !userData.firstName) {
+    return (
+      <div className="account-page">
+        <div className="loading-spinner">
+          <p>Kraunami duomenys...</p>
+        </div>
+      </div>
+    );
+  }
 
   const renderProfileTab = () => (
     <div className="profile-section">
@@ -619,15 +623,6 @@ const Account = () => {
                 type="tel"
                 value={userData.phone}
                 onChange={(e) => handleInputChange("phone", e.target.value)}
-                disabled={!isEditing || loading}
-              />
-            </div>
-            <div className="form-group full-width">
-              <label>Adresas</label>
-              <input
-                type="text"
-                value={userData.address}
-                onChange={(e) => handleInputChange("address", e.target.value)}
                 disabled={!isEditing || loading}
               />
             </div>
@@ -716,8 +711,8 @@ const Account = () => {
                   onClick={() => togglePetDetails(pet.id)}
                 >
                   {expandedPetDetails[pet.id]
-                    ? "Slėpti detalės"
-                    : "Rodyti detalės"}
+                    ? "Slėpti detales"
+                    : "Rodyti detales"}
                 </button>
                 <button
                   className="btn secondary small"
@@ -735,17 +730,17 @@ const Account = () => {
                 </button>
               </div>
 
-              {/* Išplėsta informacija - ligų istorija ir vizitai */}
+              {/* Išplėsta informacija - sirgimų istorija ir skiepai */}
               {expandedPetDetails[pet.id] && (
                 <div className="pet-expanded-details">
                   <div className="pet-section">
                     <div className="section-header">
-                      <h5>🩺 Ligų istorija</h5>
+                      <h5>🩺 Sirgimų istorija</h5>
                       <button
                         className="btn primary small"
                         onClick={() => handleAddIllness(pet.id)}
                       >
-                        + Pridėti ligą
+                        + Pridėti sirgimą
                       </button>
                     </div>
                     {pet.illnesses && pet.illnesses.length > 0 ? (
@@ -791,32 +786,36 @@ const Account = () => {
 
                   <div className="pet-section">
                     <div className="section-header">
-                      <h5>💉 Vizitai ir skiepai</h5>
+                      <h5>💉 Skiepai</h5>
                       <button
                         className="btn primary small"
-                        onClick={() => handleAddVisit(pet.id)}
+                        onClick={() => handleAddVaccination(pet.id)}
                       >
-                        + Pridėti vizitą
+                        + Pridėti skiepą
                       </button>
                     </div>
-                    {pet.visits && pet.visits.length > 0 ? (
-                      <div className="visits-list">
-                        {pet.visits.map((visit) => (
-                          <div key={visit.id} className="visit-item">
-                            <div className="visit-header">
-                              <strong>{getVisitTypeName(visit.type)}</strong>
-                              <span className="visit-date">
-                                {formatDate(visit.start)}
+                    {pet.vaccinations && pet.vaccinations.length > 0 ? (
+                      <div className="vaccinations-list">
+                        {pet.vaccinations.map((vaccination) => (
+                          <div
+                            key={vaccination.id}
+                            className="vaccination-item"
+                          >
+                            <div className="vaccination-header">
+                              <strong>{vaccination.name}</strong>
+                              <span className="vaccination-date">
+                                {formatDate(vaccination.dateAdministered)}
                               </span>
                             </div>
-                            <div className="visit-details">
-                              <p>📍 {visit.location}</p>
-                              <p>💰 {visit.price.toFixed(2)} €</p>
-                            </div>
+                            <p className="vaccination-description">
+                              {vaccination.description}
+                            </p>
                             <div className="record-actions">
                               <button
                                 className="btn-icon edit"
-                                onClick={() => handleEditVisit(pet.id, visit)}
+                                onClick={() =>
+                                  handleEditVaccination(pet.id, vaccination)
+                                }
                                 title="Redaguoti"
                               >
                                 ✏️
@@ -824,7 +823,10 @@ const Account = () => {
                               <button
                                 className="btn-icon delete"
                                 onClick={() =>
-                                  handleDeleteVisit(pet.id, visit.id)
+                                  handleDeleteVaccination(
+                                    pet.id,
+                                    vaccination.id
+                                  )
                                 }
                                 title="Šalinti"
                               >
@@ -835,7 +837,7 @@ const Account = () => {
                         ))}
                       </div>
                     ) : (
-                      <p className="empty-message">Nėra įrašytų vizitų</p>
+                      <p className="empty-message">Nėra įrašytų skiepų</p>
                     )}
                   </div>
                 </div>
@@ -999,7 +1001,7 @@ const Account = () => {
         </div>
       )}
 
-      {/* Ligos pridėjimo forma */}
+      {/* Sirgimo pridėjimo forma */}
       {showIllnessForm && (
         <div
           className="modal-overlay"
@@ -1007,7 +1009,9 @@ const Account = () => {
         >
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{editingIllness ? "Redaguoti ligą" : "Pridėti ligą"}</h3>
+              <h3>
+                {editingIllness ? "Redaguoti sirgimą" : "Pridėti sirgimą"}
+              </h3>
               <button
                 className="close-btn"
                 onClick={() => setShowIllnessForm(false)}
@@ -1019,7 +1023,7 @@ const Account = () => {
             <form onSubmit={handleSaveIllness}>
               <div className="form-grid">
                 <div className="form-group full-width">
-                  <label>Ligos pavadinimas*</label>
+                  <label>Sirgimo pavadinimas*</label>
                   <input
                     type="text"
                     required
@@ -1043,7 +1047,7 @@ const Account = () => {
                       })
                     }
                     rows="4"
-                    placeholder="Ligos aprašymas ir simptomai"
+                    placeholder="Sirgimo aprašymas ir simptomai"
                   />
                 </div>
 
@@ -1073,7 +1077,7 @@ const Account = () => {
                   Atšaukti
                 </button>
                 <button type="submit" className="btn primary">
-                  {editingIllness ? "Išsaugoti" : "Pridėti ligą"}
+                  {editingIllness ? "Išsaugoti" : "Pridėti sirgimą"}
                 </button>
               </div>
             </form>
@@ -1081,92 +1085,71 @@ const Account = () => {
         </div>
       )}
 
-      {/* Vizito pridėjimo forma */}
-      {showVisitForm && (
-        <div className="modal-overlay" onClick={() => setShowVisitForm(false)}>
+      {/* Skiepo pridėjimo forma */}
+      {showVaccinationForm && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowVaccinationForm(false)}
+        >
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>
-                {editingVisit ? "Redaguoti vizitą" : "Pridėti vizitą/skiepą"}
+                {editingVaccination ? "Redaguoti skiepą" : "Pridėti skiepą"}
               </h3>
               <button
                 className="close-btn"
-                onClick={() => setShowVisitForm(false)}
+                onClick={() => setShowVaccinationForm(false)}
               >
                 ×
               </button>
             </div>
 
-            <form onSubmit={handleSaveVisit}>
+            <form onSubmit={handleSaveVaccination}>
               <div className="form-grid">
-                <div className="form-group">
-                  <label>Vizito tipas*</label>
-                  <select
-                    required
-                    value={newVisit.type}
-                    onChange={(e) =>
-                      setNewVisit({
-                        ...newVisit,
-                        type: parseInt(e.target.value),
-                      })
-                    }
-                  >
-                    <option value="0">Profilaktinis (Skiepas)</option>
-                    <option value="1">Gydymo</option>
-                    <option value="2">Chirurginis</option>
-                    <option value="3">Diagnostinis</option>
-                    <option value="4">Reabilitacinis</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Vieta*</label>
+                <div className="form-group full-width">
+                  <label>Skiepo pavadinimas*</label>
                   <input
                     type="text"
                     required
-                    value={newVisit.location}
+                    value={newVaccination.name}
                     onChange={(e) =>
-                      setNewVisit({ ...newVisit, location: e.target.value })
+                      setNewVaccination({
+                        ...newVaccination,
+                        name: e.target.value,
+                      })
                     }
-                    placeholder="Pvz.: Veterinarijos klinika"
+                    placeholder="Pvz.: Pasiutligės vakcina"
+                  />
+                </div>
+
+                <div className="form-group full-width">
+                  <label>Aprašymas</label>
+                  <textarea
+                    value={newVaccination.description}
+                    onChange={(e) =>
+                      setNewVaccination({
+                        ...newVaccination,
+                        description: e.target.value,
+                      })
+                    }
+                    rows="4"
+                    placeholder="Skiepo aprašymas ir pastabos"
                   />
                 </div>
 
                 <div className="form-group">
-                  <label>Pradžios data ir laikas*</label>
+                  <label>Skiepo data*</label>
                   <input
-                    type="datetime-local"
+                    type="date"
                     required
-                    value={newVisit.start}
+                    value={newVaccination.dateAdministered}
                     onChange={(e) =>
-                      setNewVisit({ ...newVisit, start: e.target.value })
+                      setNewVaccination({
+                        ...newVaccination,
+                        dateAdministered: e.target.value,
+                      })
                     }
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Pabaigos data ir laikas*</label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={newVisit.end}
-                    onChange={(e) =>
-                      setNewVisit({ ...newVisit, end: e.target.value })
-                    }
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Kaina (€)*</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={newVisit.price}
-                    onChange={(e) =>
-                      setNewVisit({ ...newVisit, price: e.target.value })
-                    }
-                    placeholder="Pvz.: 25.00"
+                    max={new Date().toISOString().split("T")[0]}
                   />
                 </div>
               </div>
@@ -1175,12 +1158,12 @@ const Account = () => {
                 <button
                   type="button"
                   className="btn secondary"
-                  onClick={() => setShowVisitForm(false)}
+                  onClick={() => setShowVaccinationForm(false)}
                 >
                   Atšaukti
                 </button>
                 <button type="submit" className="btn primary">
-                  {editingVisit ? "Išsaugoti" : "Pridėti vizitą"}
+                  {editingVaccination ? "Išsaugoti" : "Pridėti skiepą"}
                 </button>
               </div>
             </form>
@@ -1264,16 +1247,6 @@ const Account = () => {
       </div>
     </div>
   );
-
-  if (loading && !userData.firstName) {
-    return (
-      <div className="account-page">
-        <div className="loading-spinner">
-          <p>Kraunami duomenys...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="account-page">

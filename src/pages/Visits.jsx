@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "../contexts/AuthContext";
 import visitsService from "../services/visitsService";
 import "../styles/Visits.css";
 
 const Visits = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 0;
   const [visits, setVisits] = useState([]);
   const [showNewVisitForm, setShowNewVisitForm] = useState(false);
   const [selectedVisit, setSelectedVisit] = useState(null);
@@ -10,7 +13,9 @@ const Visits = () => {
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("all");
   const [sortBy, setSortBy] = useState("date");
+  const [selectedVeterinarian, setSelectedVeterinarian] = useState(""); // Admin veterinaro pasirinkimas
   const [newVisit, setNewVisit] = useState({
+    veterinarianId: "",
     doctorName: "",
     specialty: "",
     date: "",
@@ -21,18 +26,116 @@ const Visits = () => {
     type: "consultation",
   });
 
+  const [availableSlots, setAvailableSlots] = useState([]);
+
+  // Atnaujinti laisvus laikus kai pasikeičia veterinaras ar data
+  useEffect(() => {
+    if (newVisit.veterinarianId && newVisit.date) {
+      const slots = getAvailableTimeSlots(
+        newVisit.veterinarianId,
+        newVisit.date
+      );
+      setAvailableSlots(slots);
+      // Išvalyti pasirinktą laiką jei jis nebeprieinamas
+      if (newVisit.time) {
+        const selectedSlot = slots.find((s) => s.time === newVisit.time);
+        if (!selectedSlot || !selectedSlot.available) {
+          setNewVisit((prev) => ({ ...prev, time: "" }));
+        }
+      }
+    } else {
+      setAvailableSlots([]);
+    }
+  }, [newVisit.veterinarianId, newVisit.date, visits]);
+
+  // Veterinarų sąrašas su darbo valandomis
+  const veterinarians = [
+    {
+      id: 1,
+      name: "Dr. Petras Petraitis",
+      specialty: "Chirurgas",
+      workDays: [1, 2, 3, 4, 5], // Pirmadienis-Penktadienis
+      workHours: { start: "09:00", end: "17:00" },
+    },
+    {
+      id: 2,
+      name: "Dr. Ana Kazlienė",
+      specialty: "Kardiologas",
+      workDays: [1, 2, 3, 4, 5],
+      workHours: { start: "10:00", end: "18:00" },
+    },
+    {
+      id: 3,
+      name: "Dr. Jonas Jonaitis",
+      specialty: "Dermatologas",
+      workDays: [2, 3, 4, 5, 6], // Antradienis-Šeštadienis
+      workHours: { start: "08:00", end: "16:00" },
+    },
+  ];
+
   const specialties = [
-    "Šeimos gydytojas",
+    "Chirurgas",
     "Kardiologas",
-    "Neurologas",
     "Dermatologas",
     "Oftalmologas",
     "Ortopedas",
-    "Ginekologas",
-    "Pediatras",
-    "Psichiatras",
-    "Endokrinologas",
   ];
+
+  // Generuoti laisvus laikus pagal veterinarą ir datą
+  const getAvailableTimeSlots = (veterinarianId, selectedDate) => {
+    if (!veterinarianId || !selectedDate) return [];
+
+    const vet = veterinarians.find((v) => v.id === parseInt(veterinarianId));
+    if (!vet) return [];
+
+    const date = new Date(selectedDate);
+    const dayOfWeek = date.getDay();
+
+    // Tikrinti ar veterinaras dirba tą dieną
+    if (!vet.workDays.includes(dayOfWeek)) {
+      return [];
+    }
+
+    // Generuoti laiko intervalus (kas 30 min)
+    const slots = [];
+    const [startHour, startMin] = vet.workHours.start.split(":").map(Number);
+    const [endHour, endMin] = vet.workHours.end.split(":").map(Number);
+
+    let currentHour = startHour;
+    let currentMin = startMin;
+
+    while (
+      currentHour < endHour ||
+      (currentHour === endHour && currentMin < endMin)
+    ) {
+      const timeStr = `${String(currentHour).padStart(2, "0")}:${String(
+        currentMin
+      ).padStart(2, "0")}`;
+
+      // Tikrinti ar šis laikas jau užimtas
+      const isOccupied = visits.some(
+        (visit) =>
+          visit.doctorName === vet.name &&
+          visit.date === selectedDate &&
+          visit.time === timeStr &&
+          visit.status !== "cancelled"
+      );
+
+      slots.push({
+        time: timeStr,
+        available: !isOccupied,
+      });
+
+      // Pridėti 30 min
+      currentMin += 30;
+      if (currentMin >= 60) {
+        currentMin = 0;
+        currentHour++;
+      }
+    }
+
+    return slots;
+  };
 
   const visitTypes = [
     { value: "consultation", label: "Konsultacija" },
@@ -172,7 +275,18 @@ const Visits = () => {
   };
 
   const filteredVisits = visits
-    .filter((visit) => filterStatus === "all" || visit.status === filterStatus)
+    .filter((visit) => {
+      // Jei admin, rodyti tik pasirinkto veterinaro vizitus
+      if (isAdmin) {
+        if (!selectedVeterinarian) return false;
+        const vet = veterinarians.find(
+          (v) => v.id === parseInt(selectedVeterinarian)
+        );
+        if (!vet || visit.doctorName !== vet.name) return false;
+      }
+      // Filtruoti pagal būseną
+      return filterStatus === "all" || visit.status === filterStatus;
+    })
     .sort((a, b) => {
       if (sortBy === "date") {
         return new Date(b.date) - new Date(a.date);
@@ -225,6 +339,71 @@ const Visits = () => {
     }
   };
 
+  const exportToExcel = () => {
+    // Sukurti CSV formatą (Excel gali atidaryti CSV failus)
+    const headers = [
+      "Data",
+      "Laikas",
+      "Veterinaras",
+      "Specializacija",
+      "Tipas",
+      "Priežastis",
+      "Simptomai",
+      "Diagnoze",
+      "Gydymas",
+      "Būsena",
+      "Pastabos",
+    ];
+
+    const rows = filteredVisits.map((visit) => [
+      new Date(visit.date).toLocaleDateString("lt-LT"),
+      visit.time || "",
+      visit.doctorName || "",
+      visit.specialty || "",
+      visitTypes.find((t) => t.value === visit.type)?.label || visit.type,
+      visit.reason || "",
+      visit.symptoms || "",
+      visit.diagnosis || "",
+      visit.treatment || "",
+      getStatusLabel(visit.status),
+      visit.notes || "",
+    ]);
+
+    // Konvertuoti į CSV
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+      ),
+    ].join("\n");
+
+    // Sukurti blob su UTF-8 BOM (kad Excel teisingai atpažintų lietuviškas raides)
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    // Atsisiusti failą
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    const vetName =
+      isAdmin && selectedVeterinarian
+        ? veterinarians
+            .find((v) => v.id === parseInt(selectedVeterinarian))
+            ?.name.replace(/\s+/g, "_")
+        : "visi";
+    const fileName = `vizitai_${vetName}_${
+      new Date().toISOString().split("T")[0]
+    }.csv`;
+
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (loading) {
     return (
       <div className="visits-page">
@@ -236,17 +415,67 @@ const Visits = () => {
   return (
     <div className="visits-page">
       <div className="visits-header">
-        <h2>Vizitai pas gydytojus</h2>
-        <p>Registruokite vizitus ir peržiūrėkite savo sveikatos istoriją</p>
+        <h2>{isAdmin ? "Veterinarų dienotvarkė" : "Vizitai pas gydytojus"}</h2>
+        <p>
+          {isAdmin
+            ? "Peržiūrėkite veterinarų užimtumą ir tvarkykite dienotvarkę"
+            : "Registruokite vizitus ir peržiūrėkite savo sveikatos istoriją"}
+        </p>
       </div>
 
+      {isAdmin && (
+        <div className="admin-vet-selector" style={{ marginBottom: "1.5rem" }}>
+          <label
+            style={{
+              display: "block",
+              marginBottom: "0.5rem",
+              fontWeight: "600",
+            }}
+          >
+            Pasirinkite veterinarą:
+          </label>
+          <select
+            value={selectedVeterinarian}
+            onChange={(e) => setSelectedVeterinarian(e.target.value)}
+            style={{
+              padding: "0.75rem",
+              fontSize: "1rem",
+              borderRadius: "8px",
+              border: "2px solid #e9ecef",
+              minWidth: "300px",
+            }}
+          >
+            <option value="">-- Pasirinkite veterinarą --</option>
+            {veterinarians.map((vet) => (
+              <option key={vet.id} value={vet.id}>
+                {vet.name} - {vet.specialty}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <div className="visits-actions">
-        <button
-          className="btn primary"
-          onClick={() => setShowNewVisitForm(true)}
-        >
-          + Registruoti naują vizitą
-        </button>
+        <div style={{ display: "flex", gap: "1rem" }}>
+          {!isAdmin && (
+            <button
+              className="btn primary"
+              onClick={() => setShowNewVisitForm(true)}
+            >
+              + Registruoti naują vizitą
+            </button>
+          )}
+          {isAdmin && selectedVeterinarian && (
+            <button
+              className="btn secondary"
+              onClick={exportToExcel}
+              disabled={filteredVisits.length === 0}
+              title="Generuoti pasirinkto veterinaro dienotvarkės suvestinę Excel formatu"
+            >
+              📄 Eksportuoti į Excel
+            </button>
+          )}
+        </div>
 
         <div className="visits-filters">
           <select
@@ -268,7 +497,11 @@ const Visits = () => {
       </div>
 
       <div className="visits-list">
-        {filteredVisits.length === 0 ? (
+        {isAdmin && !selectedVeterinarian ? (
+          <div className="no-visits">
+            <p>Pasirinkite veterinarą, kad matytumėte jo dienotvarkę</p>
+          </div>
+        ) : filteredVisits.length === 0 ? (
           <div className="no-visits">
             <p>Vizitų nerasta.</p>
           </div>
@@ -358,32 +591,27 @@ const Visits = () => {
 
             <form className="visit-form" onSubmit={handleNewVisitSubmit}>
               <div className="form-row">
-                <div className="form-group">
-                  <label>Gydytojo vardas*</label>
-                  <input
-                    type="text"
-                    required
-                    value={newVisit.doctorName}
-                    onChange={(e) =>
-                      setNewVisit({ ...newVisit, doctorName: e.target.value })
-                    }
-                    placeholder="Įveskite gydytojo vardą"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Specializacija*</label>
+                <div className="form-group full-width">
+                  <label>Veterinaras*</label>
                   <select
                     required
-                    value={newVisit.specialty}
-                    onChange={(e) =>
-                      setNewVisit({ ...newVisit, specialty: e.target.value })
-                    }
+                    value={newVisit.veterinarianId}
+                    onChange={(e) => {
+                      const vet = veterinarians.find(
+                        (v) => v.id === parseInt(e.target.value)
+                      );
+                      setNewVisit({
+                        ...newVisit,
+                        veterinarianId: e.target.value,
+                        doctorName: vet ? vet.name : "",
+                        specialty: vet ? vet.specialty : "",
+                      });
+                    }}
                   >
-                    <option value="">Pasirinkite specializaciją</option>
-                    {specialties.map((specialty) => (
-                      <option key={specialty} value={specialty}>
-                        {specialty}
+                    <option value="">Pasirinkite veterinarą</option>
+                    {veterinarians.map((vet) => (
+                      <option key={vet.id} value={vet.id}>
+                        {vet.name} - {vet.specialty}
                       </option>
                     ))}
                   </select>
@@ -406,14 +634,36 @@ const Visits = () => {
 
                 <div className="form-group">
                   <label>Laikas*</label>
-                  <input
-                    type="time"
+                  <select
                     required
                     value={newVisit.time}
                     onChange={(e) =>
                       setNewVisit({ ...newVisit, time: e.target.value })
                     }
-                  />
+                    disabled={!newVisit.veterinarianId || !newVisit.date}
+                  >
+                    <option value="">
+                      {!newVisit.veterinarianId || !newVisit.date
+                        ? "Pirmiausia pasirinkite veterinarą ir datą"
+                        : "Pasirinkite laiką"}
+                    </option>
+                    {availableSlots.map((slot) => (
+                      <option
+                        key={slot.time}
+                        value={slot.time}
+                        disabled={!slot.available}
+                      >
+                        {slot.time} {slot.available ? "" : "(užimta)"}
+                      </option>
+                    ))}
+                  </select>
+                  {availableSlots.length === 0 &&
+                    newVisit.veterinarianId &&
+                    newVisit.date && (
+                      <small style={{ color: "#dc3545", marginTop: "0.25rem" }}>
+                        Veterinaras tą dieną nedirba
+                      </small>
+                    )}
                 </div>
               </div>
 
