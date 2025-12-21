@@ -3,9 +3,16 @@ import { useAuth } from "../contexts/AuthContext";
 import visitsService from "../services/visitsService";
 import "../styles/Visits.css";
 
+// Role types: 0 = Administrator, 1 = Veterinarian, 2 = Client
+const ROLE_TYPES = {
+  Administrator: 0,
+  Veterinarian: 1,
+  Client: 2,
+};
+
 const Visits = () => {
   const { user } = useAuth();
-  const isAdmin = user?.role === 0;
+  const isAdmin = user?.role === ROLE_TYPES.Administrator;
   const [visits, setVisits] = useState([]);
   const [showNewVisitForm, setShowNewVisitForm] = useState(false);
   const [selectedVisit, setSelectedVisit] = useState(null);

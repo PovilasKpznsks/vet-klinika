@@ -67,6 +67,12 @@ class ApiClient {
         
         // Pridėti sėkmės informaciją
         const statusInfo = StatusUtils.analyzeResponseStatus(response.status, data)
+        
+        // If data is an array, don't spread it (would turn into object with numeric keys)
+        if (Array.isArray(data)) {
+          return data
+        }
+        
         return {
           ...data,
           _statusInfo: statusInfo

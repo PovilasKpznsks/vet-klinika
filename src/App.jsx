@@ -3,7 +3,6 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Header from "./components/Header";
 import Navbar from "./components/Navbar";
 import NotificationContainer from "./components/NotificationContainer";
-import Chatbot from "./components/Chatbot";
 import Home from "./pages/Home";
 import Account from "./pages/Account";
 import Admin from "./pages/Admin";
@@ -116,7 +115,6 @@ const AppContent = () => {
       />
       <main className="main-content">{renderPage()}</main>
       <NotificationContainer />
-      <Chatbot />
     </div>
   );
 };

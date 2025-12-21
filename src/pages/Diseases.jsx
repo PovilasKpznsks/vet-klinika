@@ -1,17 +1,24 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import diseasesService from "../services/diseasesService";
+import { notificationService } from "../services/notificationService";
 import "../styles/Diseases.css";
+
+// Role types: 0 = Administrator, 1 = Veterinarian, 2 = Client
+const ROLE_TYPES = {
+  Administrator: 0,
+  Veterinarian: 1,
+  Client: 2,
+};
 
 const Diseases = () => {
   const { user } = useAuth();
-  const isAdmin = user?.role === 0;
+  const isAdmin = user?.role === ROLE_TYPES.Administrator;
   const [diseases, setDiseases] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedDisease, setSelectedDisease] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [userDiseases, setUserDiseases] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({
@@ -32,30 +39,21 @@ const Diseases = () => {
 
   useEffect(() => {
     loadDiseases();
-    loadUserDiseases();
   }, []);
 
   const loadDiseases = async () => {
     try {
       setLoading(true);
-      const data = await diseasesService
-        .getDiseases()
-        .catch(() => getMockDiseases());
+      const data = await diseasesService.getDiseases();
       setDiseases(data);
     } catch (error) {
       console.error("Klaida įkeliant ligų duomenis:", error);
-      setDiseases(getMockDiseases());
+      setDiseases([]);
+      notificationService.addError(
+        `Nepavyko įkelti ligų duomenų: ${error.message}`
+      );
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadUserDiseases = async () => {
-    try {
-      const data = await diseasesService.getUserDiseases().catch(() => []);
-      setUserDiseases(data);
-    } catch (error) {
-      console.error("Klaida įkeliant vartotojo ligų duomenis:", error);
     }
   };
 
@@ -86,32 +84,31 @@ const Diseases = () => {
     e.preventDefault();
     try {
       const data = {
-        ...form,
-        symptoms: form.symptoms
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
+        name: form.name,
+        latinName: form.latinName,
+        category: form.category,
+        description: form.description,
       };
+
       if (editingId) {
-        const res = await diseasesService.updateDiseaseRecord(editingId, data);
-        if (res.success || true) {
-          setDiseases(
-            diseases.map((d) =>
-              d.id === editingId ? { ...data, id: editingId } : d
-            )
-          );
-        }
+        const updated = await diseasesService.updateDiseaseRecord(
+          editingId,
+          data
+        );
+        setDiseases(
+          diseases.map((d) =>
+            d.id === editingId ? { ...updated, id: editingId } : d
+          )
+        );
+        notificationService.addSuccess("Liga sėkmingai atnaujinta!");
       } else {
-        const res = await diseasesService.addDiseaseRecord(data);
-        const created = res.success
-          ? res.data || {
-              ...data,
-              id: (diseases[diseases.length - 1]?.id || 0) + 1,
-            }
-          : { ...data, id: (diseases[diseases.length - 1]?.id || 0) + 1 };
+        const created = await diseasesService.addDiseaseRecord(data);
         setDiseases([...diseases, created]);
+        notificationService.addSuccess("Liga sėkmingai pridėta!");
       }
+
       setShowForm(false);
+      setEditingId(null);
       setForm({
         name: "",
         latinName: "",
@@ -120,57 +117,22 @@ const Diseases = () => {
       });
     } catch (err) {
       console.error("Error saving disease:", err);
+      notificationService.addError(`Klaida išsaugant ligą: ${err.message}`);
     }
   };
 
   const deleteDisease = async (id) => {
-    if (!window.confirm("Pašalinti ligą?")) return;
+    if (!window.confirm("Ar tikrai norite pašalinti šią ligą?")) return;
     try {
-      const res = await diseasesService.deleteDiseaseRecord(id);
-      if (res.success || true) setDiseases(diseases.filter((d) => d.id !== id));
+      await diseasesService.deleteDiseaseRecord(id);
+      setDiseases(diseases.filter((d) => d.id !== id));
       setSelectedDisease(null);
+      notificationService.addSuccess("Liga sėkmingai pašalinta!");
     } catch (err) {
       console.error("Error deleting disease:", err);
+      notificationService.addError(`Klaida šalinant ligą: ${err.message}`);
     }
   };
-
-  const getMockDiseases = () => [
-    {
-      id: 1,
-      name: "Arterinė hipertenzija",
-      latinName: "Hypertensio arterialis",
-      category: 4, // Organ_system
-      description: "Padidėjęs arterinis kraujospūdis",
-    },
-    {
-      id: 2,
-      name: "Bronchų astma",
-      latinName: "Asthma bronchiale",
-      category: 4, // Organ_system
-      description: "Lėtinis kvėpavimo takų uždegimas",
-    },
-    {
-      id: 3,
-      name: "Diabetas",
-      latinName: "Diabetes mellitus",
-      category: 4, // Organ_system
-      description: "Gliukozės metabolizmo sutrikimas",
-    },
-    {
-      id: 4,
-      name: "Gastritas",
-      latinName: "Gastritis",
-      category: 0, // Infection
-      description: "Skrandžio gleivinės uždegimas",
-    },
-    {
-      id: 5,
-      name: "Epilepsija",
-      latinName: "Epilepsia",
-      category: 2, // Genetic
-      description: "Lėtinis neurologinis sutrikimas",
-    },
-  ];
 
   const filteredDiseases = diseases.filter((disease) => {
     const matchesSearch =
@@ -180,20 +142,6 @@ const Diseases = () => {
       selectedCategory === "all" || disease.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
-
-  const addToUserDiseases = async (disease) => {
-    try {
-      await diseasesService.addDiseaseRecord({
-        diseaseId: disease.id,
-        diagnosisDate: new Date().toISOString(),
-        status: "active",
-      });
-      setUserDiseases([...userDiseases, disease]);
-      alert("Liga pridėta į jūsų sveikatos istoriją");
-    } catch (error) {
-      console.error("Klaida pridedant ligą:", error);
-    }
-  };
 
   const getCategoryLabel = (category) => {
     const cat = categories.find((c) => c.value === category);
@@ -264,7 +212,9 @@ const Diseases = () => {
           <select
             value={selectedCategory}
             onChange={(e) =>
-              setSelectedCategory(e.target.value === "all" ? "all" : parseInt(e.target.value))
+              setSelectedCategory(
+                e.target.value === "all" ? "all" : parseInt(e.target.value)
+              )
             }
           >
             {categories.map((category) => (
@@ -302,7 +252,7 @@ const Diseases = () => {
                 >
                   Peržiūrėti
                 </button>
-                {isAdmin ? (
+                {isAdmin && (
                   <>
                     <button
                       className="btn secondary"
@@ -317,13 +267,6 @@ const Diseases = () => {
                       Šalinti
                     </button>
                   </>
-                ) : (
-                  <button
-                    className="btn secondary"
-                    onClick={() => addToUserDiseases(disease)}
-                  >
-                    Pridėti į istoriją
-                  </button>
                 )}
               </div>
             </div>
@@ -336,22 +279,6 @@ const Diseases = () => {
           </div>
         )}
       </div>
-
-      {userDiseases.length > 0 && (
-        <div className="user-diseases-section">
-          <h3>Jūsų sveikatos istorija</h3>
-          <div className="user-diseases-list">
-            {userDiseases.map((disease) => (
-              <div key={disease.id} className="user-disease-item">
-                <span>{disease.name}</span>
-                <span className="diagnosis-date">
-                  Diagnozė: {new Date().toLocaleDateString("lt-LT")}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {selectedDisease && (
         <div

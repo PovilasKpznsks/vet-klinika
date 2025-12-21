@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import veterinariansService from "../services/veterinariansService";
+import { notificationService } from "../services/notificationService";
 
 const AdminVets = () => {
   const [vets, setVets] = useState([]);
@@ -7,10 +8,22 @@ const AdminVets = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({
-    gimimo_data: "",
-    pareigos: "",
-    el_pastas: "",
-    kaina: "",
+    name: "",
+    surname: "",
+    email: "",
+    password: "",
+    role: 1, // Veterinarian role
+    phoneNumber: "",
+    photoUrl: "",
+    birthDate: "",
+    rank: "",
+    responsibilities: "",
+    education: "",
+    salary: "",
+    fullTime: true,
+    hireDate: "",
+    experienceYears: 0,
+    gender: 0, // 0=Male, 1=Female
   });
 
   useEffect(() => {
@@ -21,44 +34,63 @@ const AdminVets = () => {
     try {
       setLoading(true);
       const res = await veterinariansService.getAll();
-      setVets(res.success ? res.data || [] : mockVets());
-    } catch {
-      setVets(mockVets());
+      // apiWrapper returns { success, data }, where data is the array from backend
+      const vetsData = res?.success && Array.isArray(res?.data) ? res.data : [];
+      setVets(vetsData);
+    } catch (error) {
+      console.error("Klaida įkeliant veterinarų duomenis:", error);
+      setVets([]);
+      notificationService.addError(
+        `Nepavyko įkelti veterinarų duomenų: ${error.message}`
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const mockVets = () => [
-    {
-      id: 1,
-      gimimo_data: "1985-05-15",
-      pareigos: "Chirurgas",
-      el_pastas: "vet1@email.com",
-      kaina: 50.0,
-    },
-    {
-      id: 2,
-      gimimo_data: "1990-03-22",
-      pareigos: "Kardiologas",
-      el_pastas: "vet2@email.com",
-      kaina: 60.0,
-    },
-  ];
-
   const startCreate = () => {
     setEditingId(null);
     setForm({
-      gimimo_data: "",
-      pareigos: "",
-      el_pastas: "",
-      kaina: "",
+      name: "",
+      surname: "",
+      email: "",
+      password: "",
+      role: 1,
+      phoneNumber: "",
+      photoUrl: "",
+      birthDate: "",
+      rank: "",
+      responsibilities: "",
+      education: "",
+      salary: "",
+      fullTime: true,
+      hireDate: "",
+      experienceYears: 0,
+      gender: 0,
     });
     setShowForm(true);
   };
   const startEdit = (v) => {
-    setEditingId(v.id);
-    setForm({ ...v });
+    // Use veterinarianGuid for backend API calls
+    setEditingId(v.veterinarianGuid);
+    setForm({
+      name: v.name || "",
+      surname: v.surname || "",
+      email: v.email || "",
+      password: "",
+      role: v.role || 1,
+      phoneNumber: v.phoneNumber || "",
+      photoUrl: v.photoUrl || "",
+      birthDate: v.birthDate ? v.birthDate.split("T")[0] : "",
+      rank: v.rank || "",
+      responsibilities: v.responsibilities || "",
+      education: v.education || "",
+      salary: v.salary || "",
+      fullTime: v.fullTime !== undefined ? v.fullTime : true,
+      hireDate: v.hireDate ? v.hireDate.split("T")[0] : "",
+      experienceYears: v.experienceYears || 0,
+      gender: v.gender || 0,
+    });
     setShowForm(true);
   };
 
@@ -66,38 +98,81 @@ const AdminVets = () => {
     e.preventDefault();
     try {
       if (editingId) {
-        const res = await veterinariansService.update(editingId, form);
+        // Update only allows certain fields
+        const updateData = {
+          birthDate: form.birthDate
+            ? `${form.birthDate}T00:00:00`
+            : new Date().toISOString(),
+          rank: form.rank,
+          responsibilities: form.responsibilities,
+          education: form.education,
+          salary: parseFloat(form.salary) || 0,
+          fullTime: form.fullTime ? 1.0 : 0.0,
+          hireDate: form.hireDate
+            ? `${form.hireDate}T00:00:00`
+            : new Date().toISOString(),
+          experienceYears: parseInt(form.experienceYears) || 0,
+          gender: parseInt(form.gender),
+        };
+        const res = await veterinariansService.update(editingId, updateData);
         if (res.success) {
-          setVets(
-            vets.map((v) =>
-              v.id === editingId ? { ...form, id: editingId } : v
-            )
-          );
+          await load(); // Reload all data
+          notificationService.addSuccess("Veterinaro duomenys atnaujinti!");
         }
       } else {
-        const res = await veterinariansService.create(form);
-        const created = res.success
-          ? res.data || { ...form, id: (vets[vets.length - 1]?.id || 0) + 1 }
-          : { ...form, id: (vets[vets.length - 1]?.id || 0) + 1 };
-        setVets([...vets, created]);
+        // Create requires all fields
+        const createData = {
+          name: form.name,
+          surname: form.surname,
+          email: form.email,
+          password: form.password,
+          role: parseInt(form.role),
+          phoneNumber: form.phoneNumber,
+          photoUrl: form.photoUrl || "",
+          birthDate: form.birthDate
+            ? `${form.birthDate}T00:00:00`
+            : new Date().toISOString(),
+          rank: form.rank,
+          responsibilities: form.responsibilities,
+          education: form.education,
+          salary: parseFloat(form.salary) || 0,
+          fullTime: form.fullTime ? 1.0 : 0.0,
+          hireDate: form.hireDate
+            ? `${form.hireDate}T00:00:00`
+            : new Date().toISOString(),
+          experienceYears: parseInt(form.experienceYears) || 0,
+          gender: parseInt(form.gender),
+        };
+        const res = await veterinariansService.create(createData);
+        if (res.success) {
+          await load(); // Reload all data
+          notificationService.addSuccess("Veterinaras sėkmingai pridėtas!");
+        }
       }
       setShowForm(false);
       setEditingId(null);
-      setForm({
-        gimimo_data: "",
-        pareigos: "",
-        el_pastas: "",
-        kaina: "",
-      });
-    } catch {}
+    } catch (error) {
+      console.error("Klaida išsaugant veterinarą:", error);
+      notificationService.addError(
+        `Klaida išsaugant veterinarą: ${error.message}`
+      );
+    }
   };
 
   const removeVet = async (id) => {
-    if (!window.confirm("Pašalinti veterinarą?")) return;
+    if (!window.confirm("Ar tikrai norite pašalinti šį veterinarą?")) return;
     try {
       const res = await veterinariansService.remove(id);
-      if (res.success || true) setVets(vets.filter((v) => v.id !== id));
-    } catch {}
+      if (res.success) {
+        setVets(vets.filter((v) => v.id !== id));
+        notificationService.addSuccess("Veterinaras sėkmingai pašalintas!");
+      }
+    } catch (error) {
+      console.error("Klaida šalinant veterinarą:", error);
+      notificationService.addError(
+        `Klaida šalinant veterinarą: ${error.message}`
+      );
+    }
   };
 
   if (loading) return <div>Kraunama...</div>;
@@ -118,22 +193,32 @@ const AdminVets = () => {
       ) : (
         <div className="pets-grid">
           {vets.map((v) => (
-            <div key={v.id} className="pet-card">
+            <div key={v.id || v.veterinarianGuid} className="pet-card">
               <div className="pet-card-header">
                 <div className="pet-avatar">🩺</div>
                 <div className="pet-info">
-                  <h4>{v.el_pastas}</h4>
-                  <p>{v.pareigos}</p>
+                  <h4>
+                    {v.name} {v.surname}
+                  </h4>
+                  <p>{v.rank || "Veterinaras"}</p>
                 </div>
               </div>
               <div className="pet-details">
                 <div className="detail-row">
-                  <span className="label">Gimimo data:</span>
-                  <span>{v.gimimo_data}</span>
+                  <span className="label">El. paštas:</span>
+                  <span>{v.email}</span>
                 </div>
                 <div className="detail-row">
-                  <span className="label">Kaina:</span>
-                  <span>{v.kaina} €</span>
+                  <span className="label">Telefonas:</span>
+                  <span>{v.phoneNumber || "-"}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="label">Pareigos:</span>
+                  <span>{v.responsibilities || "-"}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="label">Patirtis:</span>
+                  <span>{v.experienceYears || 0} m.</span>
                 </div>
               </div>
               <div className="pet-actions">
@@ -145,7 +230,7 @@ const AdminVets = () => {
                 </button>
                 <button
                   className="btn danger small"
-                  onClick={() => removeVet(v.id)}
+                  onClick={() => removeVet(v.veterinarianGuid)}
                 >
                   Šalinti
                 </button>
@@ -168,14 +253,72 @@ const AdminVets = () => {
             </div>
             <form className="pet-form" onSubmit={save}>
               <div className="form-grid">
+                {!editingId && (
+                  <>
+                    <div className="form-group">
+                      <label>Vardas*</label>
+                      <input
+                        required
+                        value={form.name}
+                        onChange={(e) =>
+                          setForm({ ...form, name: e.target.value })
+                        }
+                        placeholder="Pvz.: Jonas"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Pavardė*</label>
+                      <input
+                        required
+                        value={form.surname}
+                        onChange={(e) =>
+                          setForm({ ...form, surname: e.target.value })
+                        }
+                        placeholder="Pvz.: Jonaitis"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>El. paštas*</label>
+                      <input
+                        type="email"
+                        required
+                        value={form.email}
+                        onChange={(e) =>
+                          setForm({ ...form, email: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Slaptažodis*</label>
+                      <input
+                        type="password"
+                        required
+                        value={form.password}
+                        onChange={(e) =>
+                          setForm({ ...form, password: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Telefono numeris</label>
+                      <input
+                        value={form.phoneNumber}
+                        onChange={(e) =>
+                          setForm({ ...form, phoneNumber: e.target.value })
+                        }
+                        placeholder="+370..."
+                      />
+                    </div>
+                  </>
+                )}
                 <div className="form-group">
                   <label>Gimimo data*</label>
                   <input
                     type="date"
                     required
-                    value={form.gimimo_data}
+                    value={form.birthDate}
                     onChange={(e) =>
-                      setForm({ ...form, gimimo_data: e.target.value })
+                      setForm({ ...form, birthDate: e.target.value })
                     }
                   />
                 </div>
@@ -183,36 +326,88 @@ const AdminVets = () => {
                   <label>Pareigos*</label>
                   <input
                     required
-                    value={form.pareigos}
-                    onChange={(e) =>
-                      setForm({ ...form, pareigos: e.target.value })
-                    }
+                    value={form.rank}
+                    onChange={(e) => setForm({ ...form, rank: e.target.value })}
                     placeholder="Pvz.: Chirurgas"
                   />
                 </div>
                 <div className="form-group">
-                  <label>El. paštas*</label>
+                  <label>Atsakomybės</label>
                   <input
-                    type="email"
-                    required
-                    value={form.el_pastas}
+                    value={form.responsibilities}
                     onChange={(e) =>
-                      setForm({ ...form, el_pastas: e.target.value })
+                      setForm({ ...form, responsibilities: e.target.value })
                     }
+                    placeholder="Pvz.: Chirurgija, skubios pagalbos"
                   />
                 </div>
                 <div className="form-group">
-                  <label>Kaina (€)*</label>
+                  <label>Išsilavinimas</label>
+                  <input
+                    value={form.education}
+                    onChange={(e) =>
+                      setForm({ ...form, education: e.target.value })
+                    }
+                    placeholder="Pvz.: Veterinarijos magistras"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Atlyginimas (€)*</label>
                   <input
                     type="number"
                     step="0.01"
                     required
-                    value={form.kaina}
+                    value={form.salary}
                     onChange={(e) =>
-                      setForm({ ...form, kaina: e.target.value })
+                      setForm({ ...form, salary: e.target.value })
                     }
-                    placeholder="50.00"
+                    placeholder="2000.00"
                   />
+                </div>
+                <div className="form-group">
+                  <label>Priimtas darbas</label>
+                  <input
+                    type="date"
+                    value={form.hireDate}
+                    onChange={(e) =>
+                      setForm({ ...form, hireDate: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Darbo patirtis (metais)</label>
+                  <input
+                    type="number"
+                    value={form.experienceYears}
+                    onChange={(e) =>
+                      setForm({ ...form, experienceYears: e.target.value })
+                    }
+                    placeholder="5"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Lytis</label>
+                  <select
+                    value={form.gender}
+                    onChange={(e) =>
+                      setForm({ ...form, gender: parseInt(e.target.value) })
+                    }
+                  >
+                    <option value={0}>Vyras</option>
+                    <option value={1}>Moteris</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Viso etato</label>
+                  <select
+                    value={form.fullTime}
+                    onChange={(e) =>
+                      setForm({ ...form, fullTime: e.target.value === "true" })
+                    }
+                  >
+                    <option value="true">Taip</option>
+                    <option value="false">Ne</option>
+                  </select>
                 </div>
               </div>
               <div className="form-actions">

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import Chatbot from "../components/Chatbot";
 import "../styles/Products.css";
 
 // Categories mapped from ProductType enum
@@ -832,6 +833,8 @@ const Products = () => {
           }}
         />
       )}
+
+      <Chatbot />
     </div>
   );
 };

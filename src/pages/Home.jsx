@@ -54,7 +54,7 @@ const Home = () => {
           <div className="feature-card">
             <span className="feature-icon">💚</span>
             <h3>Individuali priežiūra</h3>
-            <p>Kiekvienas augintinys sulaukia asmeninio dėmesio ir rūpesčio</p>
+            <p>Kiekvienas augintinis sulaukia asmeninio dėmesio ir rūpesčio</p>
           </div>
         </div>
       </section>
