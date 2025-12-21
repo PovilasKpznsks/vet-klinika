@@ -6,7 +6,7 @@ import { notificationService } from "../services/notificationService";
 import "../styles/Account.css";
 
 const Account = () => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const isAdmin = user?.role === 0; // Administrator role
   const [activeTab, setActiveTab] = useState("profile");
   const [isEditing, setIsEditing] = useState(false);
@@ -43,18 +43,18 @@ const Account = () => {
     description: "",
     dateDiagnosed: "",
   });
-  const [diseasesList, setDiseasesList] = useState([])
+  const [diseasesList, setDiseasesList] = useState([]);
   const [newVaccination, setNewVaccination] = useState({
     name: "",
     description: "",
     dateAdministered: "",
   });
-  const [productsList, setProductsList] = useState([])
+  const [productsList, setProductsList] = useState([]);
   const [newProductUsed, setNewProductUsed] = useState({
-    dosage: '',
+    dosage: "",
     timesPerDay: 1,
-    productId: null
-  })
+    productId: null,
+  });
   const [newPet, setNewPet] = useState({
     name: "",
     breed: "",
@@ -64,6 +64,18 @@ const Account = () => {
     photoUrl: "",
     dateOfBirth: "",
     weight: "",
+  });
+  const [petImageFile, setPetImageFile] = useState(null);
+  const [petImagePreview, setPetImagePreview] = useState(null);
+  const [uploadingPetImage, setUploadingPetImage] = useState(false);
+  const [profileImageFile, setProfileImageFile] = useState(null);
+  const [profileImagePreview, setProfileImagePreview] = useState(null);
+  const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
 
   // Duomenų įkėlimas iš API
@@ -90,47 +102,59 @@ const Account = () => {
       setLoading(true);
 
       // Naudoti pagerintą userService su automatiniais pranešimais
-      const [profileResult, petsResult, diseases, products] = await Promise.all([
-        userService.getProfile(false), // Nereikia sėkmės pranešimo įkėlimui
-        userService.getMyAnimals(),
-        // diseasesService fetches via absolute host
-        import('../services/diseasesService').then(m => m.default.getDiseases().catch(() => [])),
-        import('../services/productsService').then(m => m.default.getProducts().catch(() => [])),
-      ]);
+      const [profileResult, petsResult, diseases, products] = await Promise.all(
+        [
+          userService.getProfile(false), // Nereikia sėkmės pranešimo įkėlimui
+          userService.getMyAnimals(),
+          // diseasesService fetches via absolute host
+          import("../services/diseasesService").then((m) =>
+            m.default.getDiseases().catch(() => [])
+          ),
+          import("../services/productsService").then((m) =>
+            m.default.getProducts().catch(() => [])
+          ),
+        ]
+      );
 
-      if (profileResult?.success && profileResult.data && typeof profileResult.data === 'object') {
-        setUserData(profileResult.data)
+      if (
+        profileResult?.success &&
+        profileResult.data &&
+        typeof profileResult.data === "object"
+      ) {
+        setUserData(profileResult.data);
       }
 
       if (petsResult?.success) {
-        const pr = petsResult.data
+        const pr = petsResult.data;
 
         // Normalize several possible shapes into an array
-        let petsArray = []
+        let petsArray = [];
         if (Array.isArray(pr)) {
-          petsArray = pr
+          petsArray = pr;
         } else if (pr && Array.isArray(pr.data)) {
-          petsArray = pr.data
-        } else if (pr && typeof pr === 'object') {
+          petsArray = pr.data;
+        } else if (pr && typeof pr === "object") {
           // Handle case where API returned an array but apiClient spread it into an object
-          const numericKeys = Object.keys(pr).filter((k) => /^\d+$/.test(k)).sort((a, b) => +a - +b)
+          const numericKeys = Object.keys(pr)
+            .filter((k) => /^\d+$/.test(k))
+            .sort((a, b) => +a - +b);
           if (numericKeys.length > 0) {
-            petsArray = numericKeys.map((k) => pr[k])
+            petsArray = numericKeys.map((k) => pr[k]);
           }
         }
 
-        setPets(petsArray)
+        setPets(petsArray);
       } else {
-        setPets([])
+        setPets([]);
       }
 
       // set diseases and products (if available)
-      setDiseasesList(Array.isArray(diseases) ? diseases : [])
-      setProductsList(Array.isArray(products) ? products : [])
+      setDiseasesList(Array.isArray(diseases) ? diseases : []);
+      setProductsList(Array.isArray(products) ? products : []);
     } catch (error) {
       console.error("Error loading user data:", error);
       notificationService.addError("Nepavyko įkelti vartotojo duomenų");
-      setPets([])
+      setPets([]);
     } finally {
       setLoading(false);
     }
@@ -142,11 +166,44 @@ const Account = () => {
     try {
       setLoading(true);
 
+      let photoUrl = userData.photoUrl;
+
+      // Upload profile image if file selected
+      if (profileImageFile) {
+        setUploadingProfileImage(true);
+        const uploadFormData = new FormData();
+        uploadFormData.append("file", profileImageFile);
+
+        const token = localStorage.getItem("auth_token");
+        const uploadResponse = await fetch(
+          "http://localhost:5068/api/Users/upload-image",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: uploadFormData,
+          }
+        );
+
+        if (!uploadResponse.ok) {
+          throw new Error("Nepavyko įkelti nuotraukos");
+        }
+
+        const uploadResult = await uploadResponse.json();
+        photoUrl = uploadResult.photoUrl;
+        setUploadingProfileImage(false);
+      }
+
       // Naudoti pagerintą userService su automatiniais pranešimais
-      const result = await userService.updateProfile(userData);
+      const result = await userService.updateProfile({ ...userData, photoUrl });
 
       if (result.success) {
         setIsEditing(false);
+        setProfileImageFile(null);
+        setProfileImagePreview(null);
+        // Atnaujinti AuthContext su nauju photoUrl
+        updateUser({ ...userData, photoUrl });
         // Pranešimas jau bus parodytas automatiškai per userService
       }
     } catch (error) {
@@ -164,25 +221,43 @@ const Account = () => {
     }));
   };
 
-  const handleChangePassword = async () => {
-    const currentPassword = prompt("Įveskite dabartinį slaptažodį:");
-    if (!currentPassword) return;
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
 
-    const newPassword = prompt("Įveskite naują slaptažodį:");
-    if (!newPassword) return;
-
-    const confirmPassword = prompt("Pakartokite naują slaptažodį:");
-    if (newPassword !== confirmPassword) {
-      notificationService.addError("Slaptažodžiai nesutampa");
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      notificationService.addError(
+        "Naujas slaptažodis ir patvirtinimas nesutampa"
+      );
       return;
     }
 
-    const result = await userService.changePassword({
-      currentPassword,
-      newPassword,
-    });
+    if (passwordData.newPassword.length < 6) {
+      notificationService.addError(
+        "Naujas slaptažodis turi būti bent 6 simbolių ilgio"
+      );
+      return;
+    }
 
-    // Pranešimas bus parodytas automatiškai per userService
+    try {
+      setLoading(true);
+      const result = await userService.changePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
+
+      if (result.success) {
+        setShowPasswordModal(false);
+        setPasswordData({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+      }
+    } catch (error) {
+      console.error("Password change error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -221,6 +296,8 @@ const Account = () => {
       dateOfBirth: "",
       weight: "",
     });
+    setPetImageFile(null);
+    setPetImagePreview(null);
     setShowPetForm(true);
   };
 
@@ -236,7 +313,83 @@ const Account = () => {
       dateOfBirth: formatDateForInput(pet.dateOfBirth),
       weight: pet.weight,
     });
+    setPetImageFile(null);
+    setPetImagePreview(
+      pet.photoUrl ? `http://localhost:5068${pet.photoUrl}` : null
+    );
     setShowPetForm(true);
+  };
+
+  const handlePetImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
+      if (!allowedTypes.includes(file.type)) {
+        notificationService.addError(
+          "Netinkamas failo tipas. Leidžiami: JPG, PNG, GIF, WEBP"
+        );
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        notificationService.addError(
+          "Failas per didelis. Maksimalus dydis: 5MB"
+        );
+        return;
+      }
+      setPetImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPetImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemovePetImage = () => {
+    setPetImageFile(null);
+    setPetImagePreview(null);
+    setNewPet((prev) => ({ ...prev, photoUrl: "" }));
+  };
+
+  const handleProfileImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
+      if (!allowedTypes.includes(file.type)) {
+        notificationService.addError(
+          "Netinkamas failo tipas. Leidžiami: JPG, PNG, GIF, WEBP"
+        );
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        notificationService.addError(
+          "Failas per didelis. Maksimalus dydis: 5MB"
+        );
+        return;
+      }
+      setProfileImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveProfileImage = () => {
+    setProfileImageFile(null);
+    setProfileImagePreview(null);
+    setUserData((prev) => ({ ...prev, photoUrl: "" }));
   };
 
   const handleSavePet = async (e) => {
@@ -244,20 +397,55 @@ const Account = () => {
     try {
       setLoading(true);
 
+      let photoUrl = newPet.photoUrl;
+
+      // Upload image if file selected
+      if (petImageFile) {
+        setUploadingPetImage(true);
+        const uploadFormData = new FormData();
+        uploadFormData.append("file", petImageFile);
+
+        const token = localStorage.getItem("auth_token");
+        const uploadResponse = await fetch(
+          "http://localhost:5068/api/Animal/upload-image",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: uploadFormData,
+          }
+        );
+
+        if (!uploadResponse.ok) {
+          throw new Error("Nepavyko įkelti nuotraukos");
+        }
+
+        const uploadResult = await uploadResponse.json();
+        photoUrl = uploadResult.photoUrl;
+        setUploadingPetImage(false);
+      }
+
+      const petData = { ...newPet, photoUrl };
+
       if (editingPet) {
         // Atnaujinti esamą gyvūną
-        const result = await petsService.updatePet(editingPet, newPet);
+        const result = await petsService.updatePet(editingPet, petData);
         if (result.success) {
-          await loadUserData()
-          setShowPetForm(false)
-          setEditingPet(null)
+          await loadUserData();
+          setShowPetForm(false);
+          setEditingPet(null);
+          setPetImageFile(null);
+          setPetImagePreview(null);
         }
       } else {
         // Pridėti naują gyvūną
-        const result = await petsService.addPet(newPet);
+        const result = await petsService.addPet(petData);
         if (result.success) {
-          await loadUserData()
-          setShowPetForm(false)
+          await loadUserData();
+          setShowPetForm(false);
+          setPetImageFile(null);
+          setPetImagePreview(null);
         }
       }
 
@@ -288,7 +476,7 @@ const Account = () => {
       const result = await petsService.deletePet(petId);
 
       if (result.success) {
-        await loadUserData()
+        await loadUserData();
       }
     } catch (error) {
       console.error("Klaida trinant gyvūną:", error);
@@ -368,38 +556,41 @@ const Account = () => {
     e.preventDefault();
     (async () => {
       try {
-        const animalId = selectedPetForRecord
+        const animalId = selectedPetForRecord;
         const dto = {
           Name: newIllness.name,
           Description: newIllness.description,
           DateDiagnosed: newIllness.dateDiagnosed,
-          DiseaseId: newIllness.diseaseId || null
-        }
-        const animalSvc = (await import('../services/animalService')).default
+          DiseaseId: newIllness.diseaseId || null,
+        };
+        const animalSvc = (await import("../services/animalService")).default;
         if (editingIllness) {
-          await animalSvc.updateIllness(animalId, editingIllness.id, dto)
+          await animalSvc.updateIllness(animalId, editingIllness.id, dto);
         } else {
-          await animalSvc.createIllness(animalId, dto)
+          await animalSvc.createIllness(animalId, dto);
         }
-        await loadUserData()
-        notificationService.addSuccess(editingIllness ? 'Liga atnaujinta' : 'Liga sėkmingai pridėta')
+        await loadUserData();
+        notificationService.addSuccess(
+          editingIllness ? "Liga atnaujinta" : "Liga sėkmingai pridėta"
+        );
       } catch (err) {
-        console.error(err)
+        console.error(err);
       } finally {
-        setShowIllnessForm(false)
-        setEditingIllness(null)
-        setSelectedPetForRecord(null)
+        setShowIllnessForm(false);
+        setEditingIllness(null);
+        setSelectedPetForRecord(null);
       }
-    })()
+    })();
   };
 
   const handleEditIllness = (petId, illness) => {
     setSelectedPetForRecord(petId);
     setEditingIllness(illness);
     setNewIllness({
-      name: illness.name || '',
-      description: illness.description || '',
-      dateDiagnosed: illness.dateDiagnosed || illness.date || illness.Date || '',
+      name: illness.name || "",
+      description: illness.description || "",
+      dateDiagnosed:
+        illness.dateDiagnosed || illness.date || illness.Date || "",
     });
     setShowIllnessForm(true);
   };
@@ -410,14 +601,14 @@ const Account = () => {
     }
     (async () => {
       try {
-        const animalSvc = (await import('../services/animalService')).default
-        await animalSvc.deleteIllness(petId, illnessId)
-        await loadUserData()
-        notificationService.addSuccess('Liga pašalinta')
+        const animalSvc = (await import("../services/animalService")).default;
+        await animalSvc.deleteIllness(petId, illnessId);
+        await loadUserData();
+        notificationService.addSuccess("Liga pašalinta");
       } catch (err) {
-        console.error(err)
+        console.error(err);
       }
-    })()
+    })();
   };
 
   const handleAddVaccination = (petId) => {
@@ -433,99 +624,117 @@ const Account = () => {
 
   // ProductsUsed handlers
   const handleAddProductUsed = (petId) => {
-    setSelectedPetForRecord(petId)
-    setEditingProductUsed(null)
-    setNewProductUsed({ dosage: '', timesPerDay: 1, productId: null })
-    setShowProductUsedForm(true)
-  }
+    setSelectedPetForRecord(petId);
+    setEditingProductUsed(null);
+    setNewProductUsed({ dosage: "", timesPerDay: 1, productId: null });
+    setShowProductUsedForm(true);
+  };
 
   const handleSaveProductUsed = (e) => {
-    e.preventDefault()
-    ;(async () => {
+    e.preventDefault();
+    (async () => {
       try {
-        const animalId = selectedPetForRecord
+        const animalId = selectedPetForRecord;
         const dto = {
           Dosage: newProductUsed.dosage,
           TimesPerDay: Number(newProductUsed.timesPerDay) || 1,
-          ProductId: newProductUsed.productId || null
-        }
-        const animalSvc = (await import('../services/animalService')).default
+          ProductId: newProductUsed.productId || null,
+        };
+        const animalSvc = (await import("../services/animalService")).default;
         if (editingProductUsed) {
-          await animalSvc.updateProductUsed(animalId, editingProductUsed.id, dto)
+          await animalSvc.updateProductUsed(
+            animalId,
+            editingProductUsed.id,
+            dto
+          );
         } else {
-          await animalSvc.createProductUsed(animalId, dto)
+          await animalSvc.createProductUsed(animalId, dto);
         }
-        await loadUserData()
-        notificationService.addSuccess(editingProductUsed ? 'Produktas atnaujintas' : 'Produktas pridėtas')
+        await loadUserData();
+        notificationService.addSuccess(
+          editingProductUsed ? "Produktas atnaujintas" : "Produktas pridėtas"
+        );
       } catch (err) {
-        console.error(err)
+        console.error(err);
       } finally {
-        setShowProductUsedForm(false)
-        setEditingProductUsed(null)
-        setSelectedPetForRecord(null)
+        setShowProductUsedForm(false);
+        setEditingProductUsed(null);
+        setSelectedPetForRecord(null);
       }
-    })()
-  }
+    })();
+  };
 
   const handleEditProductUsed = (petId, productUsed) => {
-    setSelectedPetForRecord(petId)
-    setEditingProductUsed(productUsed)
-    setNewProductUsed({ dosage: productUsed.dosage || '', timesPerDay: productUsed.timesPerDay || 1, productId: productUsed.productId || null })
-    setShowProductUsedForm(true)
-  }
+    setSelectedPetForRecord(petId);
+    setEditingProductUsed(productUsed);
+    setNewProductUsed({
+      dosage: productUsed.dosage || "",
+      timesPerDay: productUsed.timesPerDay || 1,
+      productId: productUsed.productId || null,
+    });
+    setShowProductUsedForm(true);
+  };
 
   const handleDeleteProductUsed = (petId, productUsedId) => {
-    if (!confirm('Ar tikrai norite pašalinti šį įrašą?')) return
-    ;(async () => {
+    if (!confirm("Ar tikrai norite pašalinti šį įrašą?")) return;
+    (async () => {
       try {
-        const animalSvc = (await import('../services/animalService')).default
-        await animalSvc.deleteProductUsed(petId, productUsedId)
-        await loadUserData()
-        notificationService.addSuccess('Įrašas pašalintas')
+        const animalSvc = (await import("../services/animalService")).default;
+        await animalSvc.deleteProductUsed(petId, productUsedId);
+        await loadUserData();
+        notificationService.addSuccess("Įrašas pašalintas");
       } catch (err) {
-        console.error(err)
+        console.error(err);
       }
-    })()
-  }
+    })();
+  };
 
   const handleSaveVaccination = (e) => {
     e.preventDefault();
     (async () => {
       try {
-        const animalId = selectedPetForRecord
+        const animalId = selectedPetForRecord;
         const dto = {
           Name: newVaccination.name,
           Description: newVaccination.description,
           Date: newVaccination.dateAdministered,
-          Manufacturer: newVaccination.manufacturer || null
-        }
-        const animalSvc = (await import('../services/animalService')).default
+          Manufacturer: newVaccination.manufacturer || null,
+        };
+        const animalSvc = (await import("../services/animalService")).default;
         if (editingVaccination) {
-          await animalSvc.updateVaccine(animalId, editingVaccination.id, dto)
+          await animalSvc.updateVaccine(animalId, editingVaccination.id, dto);
         } else {
-          await animalSvc.createVaccine(animalId, dto)
+          await animalSvc.createVaccine(animalId, dto);
         }
-        await loadUserData()
-        notificationService.addSuccess(editingVaccination ? 'Skiepas atnaujintas' : 'Skiepas sėkmingai pridėtas')
+        await loadUserData();
+        notificationService.addSuccess(
+          editingVaccination
+            ? "Skiepas atnaujintas"
+            : "Skiepas sėkmingai pridėtas"
+        );
       } catch (err) {
-        console.error(err)
+        console.error(err);
       } finally {
-        setShowVaccinationForm(false)
-        setNewVaccination({ name: '', description: '', dateAdministered: '' })
-        setSelectedPetForRecord(null)
-        setEditingVaccination(null)
+        setShowVaccinationForm(false);
+        setNewVaccination({ name: "", description: "", dateAdministered: "" });
+        setSelectedPetForRecord(null);
+        setEditingVaccination(null);
       }
-    })()
+    })();
   };
 
   const handleEditVaccination = (petId, vaccination) => {
     setSelectedPetForRecord(petId);
     setEditingVaccination(vaccination);
     setNewVaccination({
-      name: vaccination.name || '',
-      description: vaccination.description || '',
-      dateAdministered: vaccination.dateAdministered || vaccination.date || vaccination.Date || '',
-      manufacturer: vaccination.manufacturer || vaccination.Manufacturer || '',
+      name: vaccination.name || "",
+      description: vaccination.description || "",
+      dateAdministered:
+        vaccination.dateAdministered ||
+        vaccination.date ||
+        vaccination.Date ||
+        "",
+      manufacturer: vaccination.manufacturer || vaccination.Manufacturer || "",
     });
     setShowVaccinationForm(true);
   };
@@ -536,14 +745,14 @@ const Account = () => {
     }
     (async () => {
       try {
-        const animalSvc = (await import('../services/animalService')).default
-        await animalSvc.deleteVaccine(petId, vaccinationId)
-        await loadUserData()
-        notificationService.addSuccess('Skiepas pašalintas')
+        const animalSvc = (await import("../services/animalService")).default;
+        await animalSvc.deleteVaccine(petId, vaccinationId);
+        await loadUserData();
+        notificationService.addSuccess("Skiepas pašalintas");
       } catch (err) {
-        console.error(err)
+        console.error(err);
       }
-    })()
+    })();
   };
 
   // Loading state
@@ -561,16 +770,29 @@ const Account = () => {
     <div className="profile-section">
       <div className="profile-header">
         <div className="profile-avatar">
-          <span>
-            {(userData.firstName || '').charAt ? (userData.firstName || '').charAt(0) : ''}
-            {(userData.lastName || '').charAt ? (userData.lastName || '').charAt(0) : ''}
-          </span>
+          {userData.photoUrl ? (
+            <img
+              src={`http://localhost:5068${userData.photoUrl}`}
+              alt="Profile"
+              className="profile-avatar-img"
+            />
+          ) : (
+            <span>
+              {(userData.firstName || "").charAt
+                ? (userData.firstName || "").charAt(0)
+                : ""}
+              {(userData.lastName || "").charAt
+                ? (userData.lastName || "").charAt(0)
+                : ""}
+            </span>
+          )}
         </div>
         <div className="profile-info">
           <h3>
-            {(userData.firstName || userData.name) || 'Vardas'} {(userData.lastName || userData.surname) || ''}
+            {userData.firstName || userData.name || "Vardas"}{" "}
+            {userData.lastName || userData.surname || ""}
           </h3>
-          <p>{userData.email || userData.userName || ''}</p>
+          <p>{userData.email || userData.userName || ""}</p>
         </div>
         <button
           className={`edit-btn ${isEditing ? "save" : "edit"}`}
@@ -591,7 +813,7 @@ const Account = () => {
               <label>Vardas</label>
               <input
                 type="text"
-                value={userData.firstName || userData.name || ''}
+                value={userData.firstName || userData.name || ""}
                 onChange={(e) => handleInputChange("firstName", e.target.value)}
                 disabled={!isEditing || loading}
               />
@@ -600,25 +822,17 @@ const Account = () => {
               <label>Pavardė</label>
               <input
                 type="text"
-                value={userData.lastName || userData.surname || ''}
+                value={userData.lastName || userData.surname || ""}
                 onChange={(e) => handleInputChange("lastName", e.target.value)}
                 disabled={!isEditing || loading}
               />
             </div>
-            <div className="form-group">
-              <label>Gimimo data</label>
-              <input
-                type="date"
-                value={userData.birthDate || ''}
-                onChange={(e) => handleInputChange("birthDate", e.target.value)}
-                disabled={!isEditing || loading}
-              />
-            </div>
+
             <div className="form-group">
               <label>El. paštas</label>
               <input
                 type="email"
-                value={userData.email || userData.userName || ''}
+                value={userData.email || userData.userName || ""}
                 onChange={(e) => handleInputChange("email", e.target.value)}
                 disabled={!isEditing || loading}
               />
@@ -627,12 +841,70 @@ const Account = () => {
               <label>Telefono numeris</label>
               <input
                 type="tel"
-                value={userData.phone || userData.phoneNumber || ''}
+                value={userData.phone || userData.phoneNumber || ""}
                 onChange={(e) => handleInputChange("phone", e.target.value)}
                 disabled={!isEditing || loading}
               />
             </div>
           </div>
+        </div>
+
+        <div className="form-section">
+          <h4>Profilio nuotrauka</h4>
+          <div
+            className="image-upload-container"
+            style={{
+              opacity: isEditing ? 1 : 0.6,
+              pointerEvents: isEditing ? "auto" : "none",
+            }}
+            onClick={() =>
+              isEditing &&
+              document.getElementById("profile-image-input").click()
+            }
+          >
+            {profileImagePreview || userData.photoUrl ? (
+              <div className="image-preview-wrapper">
+                <img
+                  src={
+                    profileImagePreview ||
+                    `http://localhost:5068${userData.photoUrl}`
+                  }
+                  alt="Profile preview"
+                  className="image-preview"
+                />
+                {isEditing && (
+                  <button
+                    type="button"
+                    className="remove-image-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveProfileImage();
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="image-upload-placeholder">
+                <span>👤</span>
+                <p>📁 Spauskite, kad įkeltumėte nuotrauką</p>
+              </div>
+            )}
+            {isEditing && (
+              <input
+                id="profile-image-input"
+                type="file"
+                accept="image/*"
+                onChange={handleProfileImageChange}
+                className="image-upload-input"
+                style={{ display: "none" }}
+              />
+            )}
+          </div>
+          {uploadingProfileImage && (
+            <p className="uploading-text">Įkeliama...</p>
+          )}
         </div>
       </div>
     </div>
@@ -662,11 +934,19 @@ const Account = () => {
             <div key={pet.id} className="pet-card">
               <div className="pet-card-header">
                 <div className="pet-avatar">
-                  {pet.species === "Šuo"
-                    ? "🐕"
-                    : pet.species === "Katė"
-                    ? "🐈"
-                    : "🐾"}
+                  {pet.photoUrl ? (
+                    <img
+                      src={`http://localhost:5068${pet.photoUrl}`}
+                      alt={pet.name}
+                      className="pet-avatar-img"
+                    />
+                  ) : pet.species === "Šuo" ? (
+                    "🐕"
+                  ) : pet.species === "Katė" ? (
+                    "🐈"
+                  ) : (
+                    "🐾"
+                  )}
                 </div>
                 <div className="pet-info">
                   <h4>{pet.name}</h4>
@@ -754,13 +1034,37 @@ const Account = () => {
                         {pet.illnesses.map((illness) => (
                           <div key={illness.id} className="illness-item">
                             <div className="illness-header">
-                              <strong>{illness.name || 'Nežinoma liga'}</strong>
-                              <span className="illness-date">{formatDate(illness.dateDiagnosed || illness.date || illness.Date)}</span>
+                              <strong>{illness.name || "Nežinoma liga"}</strong>
+                              <span className="illness-date">
+                                {formatDate(
+                                  illness.dateDiagnosed ||
+                                    illness.date ||
+                                    illness.Date
+                                )}
+                              </span>
                             </div>
-                            <div className="illness-description">{illness.description || '—'}</div>
+                            <div className="illness-description">
+                              {illness.description || "—"}
+                            </div>
                             <div className="record-actions">
-                              <button className="btn-icon edit" onClick={() => handleEditIllness(pet.id, illness)} title="Redaguoti">✏️</button>
-                              <button className="btn-icon delete" onClick={() => handleDeleteIllness(pet.id, illness.id)} title="Šalinti">🗑️</button>
+                              <button
+                                className="btn-icon edit"
+                                onClick={() =>
+                                  handleEditIllness(pet.id, illness)
+                                }
+                                title="Redaguoti"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                className="btn-icon delete"
+                                onClick={() =>
+                                  handleDeleteIllness(pet.id, illness.id)
+                                }
+                                title="Šalinti"
+                              >
+                                🗑️
+                              </button>
                             </div>
                           </div>
                         ))}
@@ -783,16 +1087,50 @@ const Account = () => {
                     {pet.vaccinations && pet.vaccinations.length > 0 ? (
                       <div className="vaccinations-list">
                         {pet.vaccinations.map((vaccination) => (
-                          <div key={vaccination.id} className="vaccination-item">
+                          <div
+                            key={vaccination.id}
+                            className="vaccination-item"
+                          >
                             <div className="vaccination-header">
-                              <strong>{vaccination.name || 'Skiepas'}</strong>
-                              <span className="vaccination-date">{formatDate(vaccination.dateAdministered || vaccination.date || vaccination.Date)}</span>
+                              <strong>{vaccination.name || "Skiepas"}</strong>
+                              <span className="vaccination-date">
+                                {formatDate(
+                                  vaccination.dateAdministered ||
+                                    vaccination.date ||
+                                    vaccination.Date
+                                )}
+                              </span>
                             </div>
-                            <div className="vaccination-description">{vaccination.description || '—'}</div>
-                            {vaccination.manufacturer && <div className="productused-meta">Gamintojas: {vaccination.manufacturer}</div>}
+                            <div className="vaccination-description">
+                              {vaccination.description || "—"}
+                            </div>
+                            {vaccination.manufacturer && (
+                              <div className="productused-meta">
+                                Gamintojas: {vaccination.manufacturer}
+                              </div>
+                            )}
                             <div className="record-actions">
-                              <button className="btn-icon edit" onClick={() => handleEditVaccination(pet.id, vaccination)} title="Redaguoti">✏️</button>
-                              <button className="btn-icon delete" onClick={() => handleDeleteVaccination(pet.id, vaccination.id)} title="Šalinti">🗑️</button>
+                              <button
+                                className="btn-icon edit"
+                                onClick={() =>
+                                  handleEditVaccination(pet.id, vaccination)
+                                }
+                                title="Redaguoti"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                className="btn-icon delete"
+                                onClick={() =>
+                                  handleDeleteVaccination(
+                                    pet.id,
+                                    vaccination.id
+                                  )
+                                }
+                                title="Šalinti"
+                              >
+                                🗑️
+                              </button>
                             </div>
                           </div>
                         ))}
@@ -801,11 +1139,16 @@ const Account = () => {
                       <p className="empty-message">Nėra įrašytų skiepų</p>
                     )}
                   </div>
-              
+
                   <div className="pet-section">
                     <div className="section-header">
                       <h5>🧴 Naudojami produktai</h5>
-                      <button className="btn primary small" onClick={() => handleAddProductUsed(pet.id)}>+ Pridėti produktą</button>
+                      <button
+                        className="btn primary small"
+                        onClick={() => handleAddProductUsed(pet.id)}
+                      >
+                        + Pridėti produktą
+                      </button>
                     </div>
                     {pet.productsUsed && pet.productsUsed.length > 0 ? (
                       <div className="products-used-list">
@@ -813,14 +1156,39 @@ const Account = () => {
                           <div key={pu.id} className="productused-item">
                             <div className="productused-header">
                               <strong>
-                                {pu.productName || (pu.productId ? (productsList.find(p => p.id === pu.productId)?.name) : 'Produktas nenurodytas')}
+                                {pu.productName ||
+                                  (pu.productId
+                                    ? productsList.find(
+                                        (p) => p.id === pu.productId
+                                      )?.name
+                                    : "Produktas nenurodytas")}
                               </strong>
-                              <span className="productused-dosage">Dozė: {pu.dosage ?? '—'} (g.)</span>
+                              <span className="productused-dosage">
+                                Dozė: {pu.dosage ?? "—"} (g.)
+                              </span>
                             </div>
-                            <div className="productused-meta">Kartų per dieną: {pu.timesPerDay ?? 1}</div>
+                            <div className="productused-meta">
+                              Kartų per dieną: {pu.timesPerDay ?? 1}
+                            </div>
                             <div className="record-actions">
-                              <button className="btn-icon edit" onClick={() => handleEditProductUsed(pet.id, pu)} title="Redaguoti">✏️</button>
-                              <button className="btn-icon delete" onClick={() => handleDeleteProductUsed(pet.id, pu.id)} title="Šalinti">🗑️</button>
+                              <button
+                                className="btn-icon edit"
+                                onClick={() =>
+                                  handleEditProductUsed(pet.id, pu)
+                                }
+                                title="Redaguoti"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                className="btn-icon delete"
+                                onClick={() =>
+                                  handleDeleteProductUsed(pet.id, pu.id)
+                                }
+                                title="Šalinti"
+                              >
+                                🗑️
+                              </button>
                             </div>
                           </div>
                         ))}
@@ -952,15 +1320,52 @@ const Account = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>Nuotraukos URL</label>
-                  <input
-                    type="text"
-                    value={newPet.photoUrl}
-                    onChange={(e) =>
-                      handlePetInputChange("photoUrl", e.target.value)
+                  <label>Nuotrauka</label>
+                  <div
+                    className="image-upload-container"
+                    onClick={() =>
+                      document.getElementById("pet-image-input").click()
                     }
-                    placeholder="Pvz.: https://example.com/photo.jpg"
-                  />
+                  >
+                    {petImagePreview || newPet.photoUrl ? (
+                      <div className="image-preview-wrapper">
+                        <img
+                          src={
+                            petImagePreview ||
+                            `http://localhost:5068${newPet.photoUrl}`
+                          }
+                          alt="Pet preview"
+                          className="image-preview"
+                        />
+                        <button
+                          type="button"
+                          className="remove-image-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemovePetImage();
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="image-upload-placeholder">
+                        <span>🐾</span>
+                        <p>📁 Spauskite, kad įkeltumėte nuotrauką</p>
+                      </div>
+                    )}
+                    <input
+                      id="pet-image-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePetImageChange}
+                      className="image-upload-input"
+                      style={{ display: "none" }}
+                    />
+                  </div>
+                  {uploadingPetImage && (
+                    <p className="uploading-text">Įkeliama...</p>
+                  )}
                 </div>
               </div>
 
@@ -1059,12 +1464,19 @@ const Account = () => {
                 <div className="form-group">
                   <label>Susijusi liga (nebūtina)</label>
                   <select
-                    value={newIllness.diseaseId || ''}
-                    onChange={(e) => setNewIllness({ ...newIllness, diseaseId: e.target.value || null })}
+                    value={newIllness.diseaseId || ""}
+                    onChange={(e) =>
+                      setNewIllness({
+                        ...newIllness,
+                        diseaseId: e.target.value || null,
+                      })
+                    }
                   >
                     <option value="">(Nėra)</option>
-                    {diseasesList.map(d => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
+                    {diseasesList.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -1089,39 +1501,88 @@ const Account = () => {
 
       {/* Produkto naudojimo (ProductsUsed) pridėjimo forma */}
       {showProductUsedForm && (
-        <div className="modal-overlay" onClick={() => setShowProductUsedForm(false)}>
+        <div
+          className="modal-overlay"
+          onClick={() => setShowProductUsedForm(false)}
+        >
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{editingProductUsed ? 'Redaguoti naudojamą produktą' : 'Pridėti naudojamą produktą'}</h3>
-              <button className="close-btn" onClick={() => setShowProductUsedForm(false)}>×</button>
+              <h3>
+                {editingProductUsed
+                  ? "Redaguoti naudojamą produktą"
+                  : "Pridėti naudojamą produktą"}
+              </h3>
+              <button
+                className="close-btn"
+                onClick={() => setShowProductUsedForm(false)}
+              >
+                ×
+              </button>
             </div>
 
             <form onSubmit={handleSaveProductUsed}>
               <div className="form-grid">
                 <div className="form-group full-width">
                   <label>Produkto pasirinkimas (nebūtina)</label>
-                  <select value={newProductUsed.productId || ''} onChange={(e) => setNewProductUsed({ ...newProductUsed, productId: e.target.value || null })}>
+                  <select
+                    value={newProductUsed.productId || ""}
+                    onChange={(e) =>
+                      setNewProductUsed({
+                        ...newProductUsed,
+                        productId: e.target.value || null,
+                      })
+                    }
+                  >
                     <option value="">(Nėra)</option>
-                    {productsList.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
+                    {productsList.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
                     ))}
                   </select>
                 </div>
 
                 <div className="form-group">
                   <label>Dozė</label>
-                  <input type="text" value={newProductUsed.dosage} onChange={(e) => setNewProductUsed({ ...newProductUsed, dosage: e.target.value })} />
+                  <input
+                    type="text"
+                    value={newProductUsed.dosage}
+                    onChange={(e) =>
+                      setNewProductUsed({
+                        ...newProductUsed,
+                        dosage: e.target.value,
+                      })
+                    }
+                  />
                 </div>
 
                 <div className="form-group">
                   <label>Kartų per dieną</label>
-                  <input type="number" min={1} value={newProductUsed.timesPerDay} onChange={(e) => setNewProductUsed({ ...newProductUsed, timesPerDay: e.target.value })} />
+                  <input
+                    type="number"
+                    min={1}
+                    value={newProductUsed.timesPerDay}
+                    onChange={(e) =>
+                      setNewProductUsed({
+                        ...newProductUsed,
+                        timesPerDay: e.target.value,
+                      })
+                    }
+                  />
                 </div>
               </div>
 
               <div className="form-actions">
-                <button type="button" className="btn secondary" onClick={() => setShowProductUsedForm(false)}>Atšaukti</button>
-                <button type="submit" className="btn primary">{editingProductUsed ? 'Išsaugoti' : 'Pridėti'}</button>
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={() => setShowProductUsedForm(false)}
+                >
+                  Atšaukti
+                </button>
+                <button type="submit" className="btn primary">
+                  {editingProductUsed ? "Išsaugoti" : "Pridėti"}
+                </button>
               </div>
             </form>
           </div>
@@ -1264,21 +1725,12 @@ const Account = () => {
         <div className="security-actions">
           <button
             className="btn secondary"
-            onClick={handleChangePassword}
+            onClick={() => setShowPasswordModal(true)}
             disabled={loading}
           >
             Keisti slaptažodį
           </button>
-          <button className="btn secondary" disabled={loading}>
-            Dviejų veiksnių autentifikacija
-          </button>
-          <button
-            className="btn secondary"
-            onClick={handleExportData}
-            disabled={loading}
-          >
-            Eksportuoti duomenis
-          </button>
+         
           <button
             className="btn danger"
             onClick={handleDeleteAccount}
@@ -1329,6 +1781,93 @@ const Account = () => {
         {activeTab === "pets" && !isAdmin && renderPetsTab()}
         {activeTab === "settings" && renderSettingsTab()}
       </div>
+
+      {/* Password Change Modal */}
+      {showPasswordModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowPasswordModal(false)}
+        >
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Keisti slaptažodį</h3>
+              <button
+                className="modal-close"
+                onClick={() => setShowPasswordModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleChangePassword}>
+              <div className="form-group">
+                <label>Dabartinis slaptažodis</label>
+                <input
+                  type="password"
+                  value={passwordData.currentPassword}
+                  onChange={(e) =>
+                    setPasswordData((prev) => ({
+                      ...prev,
+                      currentPassword: e.target.value,
+                    }))
+                  }
+                  required
+                  minLength={6}
+                  disabled={loading}
+                />
+              </div>
+              <div className="form-group">
+                <label>Naujas slaptažodis</label>
+                <input
+                  type="password"
+                  value={passwordData.newPassword}
+                  onChange={(e) =>
+                    setPasswordData((prev) => ({
+                      ...prev,
+                      newPassword: e.target.value,
+                    }))
+                  }
+                  required
+                  minLength={6}
+                  disabled={loading}
+                />
+              </div>
+              <div className="form-group">
+                <label>Pakartokite naują slaptažodį</label>
+                <input
+                  type="password"
+                  value={passwordData.confirmPassword}
+                  onChange={(e) =>
+                    setPasswordData((prev) => ({
+                      ...prev,
+                      confirmPassword: e.target.value,
+                    }))
+                  }
+                  required
+                  minLength={6}
+                  disabled={loading}
+                />
+              </div>
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={() => setShowPasswordModal(false)}
+                  disabled={loading}
+                >
+                  Atšaukti
+                </button>
+                <button
+                  type="submit"
+                  className="btn primary"
+                  disabled={loading}
+                >
+                  {loading ? "Keičiama..." : "Pakeisti"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

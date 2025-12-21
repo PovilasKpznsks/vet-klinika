@@ -16,27 +16,27 @@ export const diseasesService = {
 
   // Gauti konkretų ligos įrašą
   async getDisease(diseaseId) {
-    return await apiClient.get(`/diseases/${diseaseId}`)
+    return await apiClient.get(`/Disease/${diseaseId}`)
   },
 
   // Gauti vartotojo ligų istoriją
   async getUserDiseases() {
-    return await apiClient.get('/diseases/user-history')
+    return await apiClient.get('/Disease/user-history')
   },
 
   // Pridėti naują ligos įrašą
   async addDiseaseRecord(diseaseData) {
-    return await apiClient.post('/diseases', diseaseData)
+    return await apiClient.post('/Disease', diseaseData)
   },
 
   // Atnaujinti ligos įrašą
   async updateDiseaseRecord(diseaseId, diseaseData) {
-    return await apiClient.put(`/diseases/${diseaseId}`, diseaseData)
+    return await apiClient.put(`/Disease/${diseaseId}`, diseaseData)
   },
 
   // Ištrinti ligos įrašą
   async deleteDiseaseRecord(diseaseId) {
-    return await apiClient.delete(`/diseases/${diseaseId}`)
+    return await apiClient.delete(`/Disease/${diseaseId}`)
   },
 
   // Gauti ligas pagal kategoriją

@@ -55,6 +55,14 @@
   font-size: 0.875rem;
   backdrop-filter: blur(10px);
   border: 2px solid rgba(255, 255, 255, 0.3);
+  overflow: hidden;
+}
+
+.user-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 .logout-btn {
