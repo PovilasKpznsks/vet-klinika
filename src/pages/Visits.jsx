@@ -112,9 +112,18 @@ const Visits = () => {
           return slotDateTime >= visitStart && slotDateTime < visitEnd;
         });
 
+        // Format as local time string with UTC+2 timezone offset
+        const year = slotDateTime.getFullYear();
+        const month = String(slotDateTime.getMonth() + 1).padStart(2, "0");
+        const day = String(slotDateTime.getDate()).padStart(2, "0");
+        const hours = String(slotDateTime.getHours()).padStart(2, "0");
+        const minutes = String(slotDateTime.getMinutes()).padStart(2, "0");
+        const seconds = String(slotDateTime.getSeconds()).padStart(2, "0");
+        const localDateTime = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+02:00`;
+
         slots.push({
           time: timeStr,
-          datetime: slotDateTime.toISOString(),
+          datetime: localDateTime,
           available: !isOccupied,
         });
       }
@@ -641,14 +650,27 @@ const Visits = () => {
                     value={newVisit.start || ""}
                     onChange={(e) => {
                       const startDateTime = e.target.value;
-                      const endDateTime = new Date(
-                        new Date(startDateTime).getTime() + 60 * 60000
-                      ).toISOString(); // 1 hour
-                      setNewVisit({
-                        ...newVisit,
-                        start: startDateTime,
-                        end: endDateTime,
-                      });
+
+                      // Parse the start time and add 1 hour directly
+                      // startDateTime format: "2025-12-22T18:00:00+02:00"
+                      const timeParts = startDateTime.match(
+                        /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\+02:00$/
+                      );
+                      if (timeParts) {
+                        const [, year, month, day, hours, minutes, seconds] =
+                          timeParts;
+                        const endHour = String(parseInt(hours) + 1).padStart(
+                          2,
+                          "0"
+                        );
+                        const endDateTime = `${year}-${month}-${day}T${endHour}:${minutes}:${seconds}+02:00`;
+
+                        setNewVisit({
+                          ...newVisit,
+                          start: startDateTime,
+                          end: endDateTime,
+                        });
+                      }
                     }}
                     disabled={!newVisit.veterinarianUuid || !selectedDate}
                   >
