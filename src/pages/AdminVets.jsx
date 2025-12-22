@@ -34,8 +34,8 @@ const AdminVets = () => {
     try {
       setLoading(true);
       const res = await veterinariansService.getAll();
-      // apiWrapper returns { success, data }, where data is the array from backend
-      const vetsData = res?.success && Array.isArray(res?.data) ? res.data : [];
+      // Service already unwraps the response to return array directly
+      const vetsData = Array.isArray(res) ? res : [];
       setVets(vetsData);
     } catch (error) {
       console.error("Klaida įkeliant veterinarų duomenis:", error);
@@ -63,7 +63,7 @@ const AdminVets = () => {
       responsibilities: "",
       education: "",
       salary: "",
-      fullTime: true,
+      fullTime: 1.0,
       hireDate: "",
       experienceYears: 0,
       gender: 0,
@@ -86,7 +86,7 @@ const AdminVets = () => {
       responsibilities: v.responsibilities || "",
       education: v.education || "",
       salary: v.salary || "",
-      fullTime: v.fullTime !== undefined ? v.fullTime : true,
+      fullTime: v.fullTime !== undefined ? v.fullTime : 1.0,
       hireDate: v.hireDate ? v.hireDate.split("T")[0] : "",
       experienceYears: v.experienceYears || 0,
       gender: v.gender || 0,
@@ -107,7 +107,7 @@ const AdminVets = () => {
           responsibilities: form.responsibilities,
           education: form.education,
           salary: parseFloat(form.salary) || 0,
-          fullTime: form.fullTime ? 1.0 : 0.0,
+          fullTime: parseFloat(form.fullTime) || 1.0,
           hireDate: form.hireDate
             ? `${form.hireDate}T00:00:00`
             : new Date().toISOString(),
@@ -136,7 +136,7 @@ const AdminVets = () => {
           responsibilities: form.responsibilities,
           education: form.education,
           salary: parseFloat(form.salary) || 0,
-          fullTime: form.fullTime ? 1.0 : 0.0,
+          fullTime: parseFloat(form.fullTime) || 1.0,
           hireDate: form.hireDate
             ? `${form.hireDate}T00:00:00`
             : new Date().toISOString(),
@@ -164,7 +164,7 @@ const AdminVets = () => {
     try {
       const res = await veterinariansService.remove(id);
       if (res.success) {
-        setVets(vets.filter((v) => v.id !== id));
+        setVets(vets.filter((v) => v.veterinarianGuid !== id));
         notificationService.addSuccess("Veterinaras sėkmingai pašalintas!");
       }
     } catch (error) {
@@ -365,7 +365,7 @@ const AdminVets = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Priimtas darbas</label>
+                  <label>Priimimo į darbą data</label>
                   <input
                     type="date"
                     value={form.hireDate}
@@ -398,15 +398,16 @@ const AdminVets = () => {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Viso etato</label>
+                  <label>Etatas</label>
                   <select
                     value={form.fullTime}
                     onChange={(e) =>
-                      setForm({ ...form, fullTime: e.target.value === "true" })
+                      setForm({ ...form, fullTime: parseFloat(e.target.value) })
                     }
                   >
-                    <option value="true">Taip</option>
-                    <option value="false">Ne</option>
+                    <option value={0.5}>0.5</option>
+                    <option value={0.75}>0.75</option>
+                    <option value={1.0}>1.0</option>
                   </select>
                 </div>
               </div>
