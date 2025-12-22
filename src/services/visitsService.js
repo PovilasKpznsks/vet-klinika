@@ -14,6 +14,12 @@ export const visitsService = {
     return await apiClient.get(`/visit/client${queryParams ? `?${queryParams}` : ''}`)
   },
 
+  // Gauti veterinaro vizitus (veterinarian)
+  async getVeterinarianVisits(params = {}) {
+    const queryParams = new URLSearchParams(params).toString()
+    return await apiClient.get(`/visit/veterinarian${queryParams ? `?${queryParams}` : ''}`)
+  },
+
   // Gauti konkretų vizitą
   async getVisit(visitId) {
     return await apiClient.get(`/visits/${visitId}`)

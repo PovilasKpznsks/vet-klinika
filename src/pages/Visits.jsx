@@ -151,6 +151,30 @@ const Visits = () => {
       if (isAdmin) {
         // Admin sees all visits
         response = await visitsService.getVisits();
+      } else if (user?.role === ROLE_TYPES.Veterinarian) {
+        // Veterinarians see their own visits
+        // Fetch all veterinarians to find the veterinarianGuid for this user
+        const userId = user?.id || user?.userGuid || user?.uuid;
+        console.log("Veterinarian user ID:", userId);
+
+        const vetsData = await veterinariansService.getAll();
+        const vets = Array.isArray(vetsData) ? vetsData : [];
+
+        // Find the veterinarian record where id matches the user's id
+        const matchedVet = vets.find((v) => v.id === userId);
+
+        if (!matchedVet || !matchedVet.veterinarianGuid) {
+          console.error("No veterinarianGuid found for user ID:", userId);
+          console.log("Available veterinarians:", vets);
+          setVisits([]);
+          setLoading(false);
+          return;
+        }
+
+        console.log("Using veterinarianGuid:", matchedVet.veterinarianGuid);
+        response = await visitsService.getVeterinarianVisits({
+          Id: matchedVet.veterinarianGuid,
+        });
       } else {
         // Regular users see only their own visits
         let userId = user?.userGuid || user?.uuid || user?.id || user?.userUUID;
