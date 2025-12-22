@@ -147,21 +147,27 @@ const Visits = () => {
     try {
       setLoading(true);
 
-      // Get user ID for filtering visits
-      let userId = user?.userGuid || user?.uuid || user?.id || user?.userUUID;
-      if (!userId) {
-        const storedUser = localStorage.getItem("user_data");
-        if (storedUser) {
-          const parsedUser = JSON.parse(storedUser);
-          userId =
-            parsedUser?.userGuid ||
-            parsedUser?.uuid ||
-            parsedUser?.id ||
-            parsedUser?.userUUID;
+      let response;
+      if (isAdmin) {
+        // Admin sees all visits
+        response = await visitsService.getVisits();
+      } else {
+        // Regular users see only their own visits
+        let userId = user?.userGuid || user?.uuid || user?.id || user?.userUUID;
+        if (!userId) {
+          const storedUser = localStorage.getItem("user_data");
+          if (storedUser) {
+            const parsedUser = JSON.parse(storedUser);
+            userId =
+              parsedUser?.userGuid ||
+              parsedUser?.uuid ||
+              parsedUser?.id ||
+              parsedUser?.userUUID;
+          }
         }
+        response = await visitsService.getClientVisits({ Id: userId });
       }
 
-      const response = await visitsService.getVisits({ UserId: userId });
       console.log("Visits data received:", response);
       // Backend returns {success, data} wrapper
       const data = response?.data || response || [];

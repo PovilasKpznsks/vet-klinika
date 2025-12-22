@@ -2,10 +2,16 @@ import apiClient from './api'
 
 // Vizitų API funkcijos
 export const visitsService = {
-  // Gauti visus vartotojo vizitus
+  // Gauti visus vizitus (admin)
   async getVisits(params = {}) {
     const queryParams = new URLSearchParams(params).toString()
     return await apiClient.get(`/visit${queryParams ? `?${queryParams}` : ''}`)
+  },
+
+  // Gauti vartotojo vizitus (client)
+  async getClientVisits(params = {}) {
+    const queryParams = new URLSearchParams(params).toString()
+    return await apiClient.get(`/visit/client${queryParams ? `?${queryParams}` : ''}`)
   },
 
   // Gauti konkretų vizitą
