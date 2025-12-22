@@ -21,7 +21,6 @@ const Visits = () => {
   const [selectedVisit, setSelectedVisit] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("all");
-  const [sortBy, setSortBy] = useState("date");
   const [selectedVeterinarian, setSelectedVeterinarian] = useState(""); // Admin veterinaro pasirinkimas
   const [newVisit, setNewVisit] = useState({
     veterinarianUuid: "",
@@ -290,21 +289,14 @@ const Visits = () => {
     return visitTypes.find((t) => t.value === type)?.label || type;
   };
 
-  const filteredVisits = visits
-    .filter((visit) => {
-      // Admin filter by selected veterinarian
-      if (isAdmin && selectedVeterinarian) {
-        if (visit.veterinarianUuid !== selectedVeterinarian) return false;
-      }
-      // Filter by status - backend doesn't return status, so skip this filter for now
-      return true;
-    })
-    .sort((a, b) => {
-      if (sortBy === "date") {
-        return new Date(b.start) - new Date(a.start);
-      }
-      return 0;
-    });
+  const filteredVisits = visits.filter((visit) => {
+    // Admin filter by selected veterinarian
+    if (isAdmin && selectedVeterinarian) {
+      if (visit.veterinarianUuid !== selectedVeterinarian) return false;
+    }
+    // Filter by status - backend doesn't return status, so skip this filter for now
+    return true;
+  });
 
   console.log("Visits rendering info:", {
     totalVisits: visits.length,
@@ -408,71 +400,6 @@ const Visits = () => {
     }
   };
 
-  const exportToExcel = () => {
-    // Sukurti CSV formatą (Excel gali atidaryti CSV failus)
-    const headers = [
-      "Data",
-      "Laikas",
-      "Veterinaras",
-      "Specializacija",
-      "Tipas",
-      "Priežastis",
-      "Simptomai",
-      "Diagnoze",
-      "Gydymas",
-      "Būsena",
-      "Pastabos",
-    ];
-
-    const rows = filteredVisits.map((visit) => [
-      new Date(visit.date).toLocaleDateString("lt-LT"),
-      visit.time || "",
-      visit.doctorName || "",
-      visit.specialty || "",
-      visitTypes.find((t) => t.value === visit.type)?.label || visit.type,
-      visit.reason || "",
-      visit.symptoms || "",
-      visit.diagnosis || "",
-      visit.treatment || "",
-      getStatusLabel(visit.status),
-      visit.notes || "",
-    ]);
-
-    // Konvertuoti į CSV
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) =>
-        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
-      ),
-    ].join("\n");
-
-    // Sukurti blob su UTF-8 BOM (kad Excel teisingai atpažintų lietuviškas raides)
-    const BOM = "\uFEFF";
-    const blob = new Blob([BOM + csvContent], {
-      type: "text/csv;charset=utf-8;",
-    });
-
-    // Atsisiusti failą
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    const vetName =
-      isAdmin && selectedVeterinarian
-        ? veterinarians
-            .find((v) => v.id === parseInt(selectedVeterinarian))
-            ?.name.replace(/\s+/g, "_")
-        : "visi";
-    const fileName = `vizitai_${vetName}_${
-      new Date().toISOString().split("T")[0]
-    }.csv`;
-
-    link.setAttribute("href", url);
-    link.setAttribute("download", fileName);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   if (loading) {
     return (
       <div className="visits-page">
@@ -535,16 +462,6 @@ const Visits = () => {
               + Registruoti naują vizitą
             </button>
           )}
-          {isAdmin && selectedVeterinarian && (
-            <button
-              className="btn secondary"
-              onClick={exportToExcel}
-              disabled={filteredVisits.length === 0}
-              title="Generuoti pasirinkto veterinaro dienotvarkės suvestinę Excel formatu"
-            >
-              📄 Eksportuoti į Excel
-            </button>
-          )}
         </div>
 
         <div className="visits-filters">
@@ -556,12 +473,6 @@ const Visits = () => {
             <option value="scheduled">Suplanuoti</option>
             <option value="completed">Įvykę</option>
             <option value="cancelled">Atšaukti</option>
-          </select>
-
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-            <option value="date">Rūšiuoti pagal datą</option>
-            <option value="doctorName">Rūšiuoti pagal gydytoją</option>
-            <option value="specialty">Rūšiuoti pagal sritį</option>
           </select>
         </div>
       </div>

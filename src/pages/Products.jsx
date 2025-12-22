@@ -25,7 +25,6 @@ const Products = () => {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("visi");
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState("name");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -145,22 +144,8 @@ const Products = () => {
       );
     }
 
-    // Sort
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case "name":
-          return (a.name || "").localeCompare(b.name || "");
-        case "manufacturer":
-          return (a.manufacturer || "").localeCompare(b.manufacturer || "");
-        case "type":
-          return (a.type || 0) - (b.type || 0);
-        default:
-          return 0;
-      }
-    });
-
     setFilteredProducts(filtered);
-  }, [products, selectedCategory, searchTerm, sortBy]);
+  }, [products, selectedCategory, searchTerm]);
 
   // Admin functions
   const handleAddProduct = () => {
@@ -693,18 +678,6 @@ const Products = () => {
 
           {/* Filters and Admin Button */}
           <div className="filters-section">
-            <div className="filter-group">
-              <label>Rūšiuoti pagal:</label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-              >
-                <option value="name">Pavadinimą</option>
-                <option value="manufacturer">Gamintoją</option>
-                <option value="type">Kategoriją</option>
-              </select>
-            </div>
-
             {isAdmin && (
               <button className="btn-add-product" onClick={handleAddProduct}>
                 ➕ Pridėti produktą
