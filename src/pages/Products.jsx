@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import Chatbot from "../components/Chatbot";
 import "../styles/Products.css";
@@ -18,6 +18,144 @@ const ROLE_TYPES = {
   Veterinarian: 1,
   Client: 2,
 };
+
+// Product Form Modal Component (outside main component to prevent recreation)
+const ProductFormModal = ({
+  isEdit,
+  onSubmit,
+  onClose,
+  formData,
+  handleFormChange,
+  imagePreview,
+  handleImageChange,
+  handleRemoveImage,
+  saving,
+  uploading,
+}) => (
+  <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-header">
+        <h2>{isEdit ? "Redaguoti produktą" : "Pridėti naują produktą"}</h2>
+        <button className="modal-close-btn" onClick={onClose}>
+          ×
+        </button>
+      </div>
+
+      <form onSubmit={onSubmit} className="product-form">
+        <div className="form-group">
+          <label htmlFor="name">Pavadinimas *</label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            value={formData.name}
+            onChange={handleFormChange}
+            required
+            placeholder="Įveskite produkto pavadinimą"
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="type">Kategorija *</label>
+          <select
+            id="type"
+            name="type"
+            value={formData.type}
+            onChange={handleFormChange}
+            required
+          >
+            {CATEGORIES.filter((c) => c.type !== null).map((cat) => (
+              <option key={cat.id} value={cat.type}>
+                {cat.icon} {cat.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="manufacturer">Gamintojas</label>
+          <input
+            type="text"
+            id="manufacturer"
+            name="manufacturer"
+            value={formData.manufacturer}
+            onChange={handleFormChange}
+            placeholder="Įveskite gamintojo pavadinimą"
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Nuotrauka</label>
+          <div className="image-upload-container">
+            {imagePreview ? (
+              <div className="image-preview-wrapper">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="image-preview"
+                />
+                <button
+                  type="button"
+                  className="btn-remove-image"
+                  onClick={handleRemoveImage}
+                >
+                  ✕ Pašalinti
+                </button>
+              </div>
+            ) : (
+              <label className="image-upload-label">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  onChange={handleImageChange}
+                  className="image-upload-input"
+                />
+                <div className="image-upload-placeholder">
+                  <span className="upload-icon">📷</span>
+                  <span>Pasirinkite nuotrauką</span>
+                  <span className="upload-hint">
+                    JPG, PNG, GIF, WEBP (max 5MB)
+                  </span>
+                </div>
+              </label>
+            )}
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="description">Aprašymas</label>
+          <textarea
+            id="description"
+            name="description"
+            value={formData.description}
+            onChange={handleFormChange}
+            rows="4"
+            placeholder="Įveskite produkto aprašymą"
+          />
+        </div>
+
+        <div className="form-actions">
+          <button type="button" className="btn-cancel" onClick={onClose}>
+            Atšaukti
+          </button>
+          <button
+            type="submit"
+            className="btn-submit"
+            disabled={saving || uploading}
+          >
+            {uploading
+              ? "Įkeliama nuotrauka..."
+              : saving
+              ? "Saugoma..."
+              : isEdit
+              ? "Atnaujinti"
+              : "Pridėti"}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+);
 
 const Products = () => {
   const { user, isAuthenticated } = useAuth();
@@ -336,16 +474,16 @@ const Products = () => {
     }
   };
 
-  const handleFormChange = (e) => {
+  const handleFormChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: name === "type" ? parseInt(value) : value,
     }));
-  };
+  }, []);
 
   // Handle image file selection
-  const handleImageChange = (e) => {
+  const handleImageChange = useCallback((e) => {
     const file = e.target.files[0];
     if (file) {
       // Validate file type
@@ -372,14 +510,14 @@ const Products = () => {
       };
       reader.readAsDataURL(file);
     }
-  };
+  }, []);
 
   // Remove selected image
-  const handleRemoveImage = () => {
+  const handleRemoveImage = useCallback(() => {
     setImageFile(null);
     setImagePreview(null);
     setFormData((prev) => ({ ...prev, photoUrl: "" }));
-  };
+  }, []);
 
   // Helper to get full image URL
   const getImageUrl = (photoUrl) => {
@@ -391,133 +529,6 @@ const Products = () => {
     // Otherwise, prepend the backend URL
     return `http://localhost:5068${photoUrl}`;
   };
-
-  // Product Form Modal
-  const ProductFormModal = ({ isEdit, onSubmit, onClose }) => (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>{isEdit ? "Redaguoti produktą" : "Pridėti naują produktą"}</h2>
-          <button className="modal-close-btn" onClick={onClose}>
-            ×
-          </button>
-        </div>
-
-        <form onSubmit={onSubmit} className="product-form">
-          <div className="form-group">
-            <label htmlFor="name">Pavadinimas *</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleFormChange}
-              required
-              placeholder="Įveskite produkto pavadinimą"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="type">Kategorija *</label>
-            <select
-              id="type"
-              name="type"
-              value={formData.type}
-              onChange={handleFormChange}
-              required
-            >
-              {CATEGORIES.filter((c) => c.type !== null).map((cat) => (
-                <option key={cat.id} value={cat.type}>
-                  {cat.icon} {cat.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="manufacturer">Gamintojas</label>
-            <input
-              type="text"
-              id="manufacturer"
-              name="manufacturer"
-              value={formData.manufacturer}
-              onChange={handleFormChange}
-              placeholder="Įveskite gamintojo pavadinimą"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Nuotrauka</label>
-            <div className="image-upload-container">
-              {imagePreview ? (
-                <div className="image-preview-wrapper">
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="image-preview"
-                  />
-                  <button
-                    type="button"
-                    className="btn-remove-image"
-                    onClick={handleRemoveImage}
-                  >
-                    ✕ Pašalinti
-                  </button>
-                </div>
-              ) : (
-                <label className="image-upload-label">
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/gif,image/webp"
-                    onChange={handleImageChange}
-                    className="image-upload-input"
-                  />
-                  <div className="image-upload-placeholder">
-                    <span className="upload-icon">📷</span>
-                    <span>Pasirinkite nuotrauką</span>
-                    <span className="upload-hint">
-                      JPG, PNG, GIF, WEBP (max 5MB)
-                    </span>
-                  </div>
-                </label>
-              )}
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="description">Aprašymas</label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleFormChange}
-              rows="4"
-              placeholder="Įveskite produkto aprašymą"
-            />
-          </div>
-
-          <div className="form-actions">
-            <button type="button" className="btn-cancel" onClick={onClose}>
-              Atšaukti
-            </button>
-            <button
-              type="submit"
-              className="btn-submit"
-              disabled={saving || uploading}
-            >
-              {uploading
-                ? "Įkeliama nuotrauka..."
-                : saving
-                ? "Saugoma..."
-                : isEdit
-                ? "Atnaujinti"
-                : "Pridėti"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
 
   if (loading) {
     return (
@@ -645,6 +656,13 @@ const Products = () => {
               setShowEditModal(false);
               setEditingProduct(null);
             }}
+            formData={formData}
+            handleFormChange={handleFormChange}
+            imagePreview={imagePreview}
+            handleImageChange={handleImageChange}
+            handleRemoveImage={handleRemoveImage}
+            saving={saving}
+            uploading={uploading}
           />
         )}
       </div>
@@ -739,26 +757,6 @@ const Products = () => {
                     <div className="type-badge">
                       {getTypeName(product.type)}
                     </div>
-
-                    {/* Admin action buttons on card */}
-                    {isAdmin && (
-                      <div className="card-admin-actions">
-                        <button
-                          className="card-btn edit"
-                          onClick={(e) => handleEditProduct(product, e)}
-                          title="Redaguoti"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          className="card-btn delete"
-                          onClick={(e) => handleDeleteProduct(product, e)}
-                          title="Ištrinti"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    )}
                   </div>
 
                   <div className="product-info">
@@ -792,6 +790,13 @@ const Products = () => {
           isEdit={false}
           onSubmit={handleSubmitAdd}
           onClose={() => setShowAddModal(false)}
+          formData={formData}
+          handleFormChange={handleFormChange}
+          imagePreview={imagePreview}
+          handleImageChange={handleImageChange}
+          handleRemoveImage={handleRemoveImage}
+          saving={saving}
+          uploading={uploading}
         />
       )}
 
@@ -804,6 +809,13 @@ const Products = () => {
             setShowEditModal(false);
             setEditingProduct(null);
           }}
+          formData={formData}
+          handleFormChange={handleFormChange}
+          imagePreview={imagePreview}
+          handleImageChange={handleImageChange}
+          handleRemoveImage={handleRemoveImage}
+          saving={saving}
+          uploading={uploading}
         />
       )}
 
