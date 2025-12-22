@@ -1,14 +1,20 @@
 import { useEffect, useState } from "react";
 import veterinariansService from "../services/veterinariansService";
-import { notificationService } from "../services/notificationService";
 
 const AdminVets = () => {
   const [vets, setVets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [showWorkdayModal, setShowWorkdayModal] = useState(false);
+  const [selectedVetForWorkday, setSelectedVetForWorkday] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
+  const [workdayForm, setWorkdayForm] = useState({
+    date: "",
+    startHour: 8,
+    endHour: 18,
+  });
   const [form, setForm] = useState({
     name: "",
     surname: "",
@@ -42,9 +48,6 @@ const AdminVets = () => {
     } catch (error) {
       console.error("Klaida įkeliant veterinarų duomenis:", error);
       setVets([]);
-      notificationService.addError(
-        `Nepavyko įkelti veterinarų duomenų: ${error.message}`
-      );
     } finally {
       setLoading(false);
     }
@@ -119,7 +122,6 @@ const AdminVets = () => {
         const res = await veterinariansService.update(editingId, updateData);
         if (res.success) {
           await load(); // Reload all data
-          notificationService.addSuccess("Veterinaro duomenys atnaujinti!");
         }
       } else {
         // Create requires all fields
@@ -148,16 +150,12 @@ const AdminVets = () => {
         const res = await veterinariansService.create(createData);
         if (res.success) {
           await load(); // Reload all data
-          notificationService.addSuccess("Veterinaras sėkmingai pridėtas!");
         }
       }
       setShowForm(false);
       setEditingId(null);
     } catch (error) {
       console.error("Klaida išsaugant veterinarą:", error);
-      notificationService.addError(
-        `Klaida išsaugant veterinarą: ${error.message}`
-      );
     }
   };
 
@@ -167,27 +165,59 @@ const AdminVets = () => {
       const res = await veterinariansService.remove(id);
       if (res.success) {
         setVets(vets.filter((v) => v.veterinarianGuid !== id));
-        notificationService.addSuccess("Veterinaras sėkmingai pašalintas!");
       }
     } catch (error) {
       console.error("Klaida šalinant veterinarą:", error);
-      notificationService.addError(
-        `Klaida šalinant veterinarą: ${error.message}`
-      );
     }
   };
 
   const handleDownloadExcel = async () => {
     try {
       await veterinariansService.downloadExcel(dateRange);
-      notificationService.addSuccess("Excel ataskaita sėkmingai atsisiųsta!");
       setShowDownloadModal(false);
       setDateRange({ startDate: "", endDate: "" });
     } catch (error) {
       console.error("Klaida atsisiunčiant Excel:", error);
-      notificationService.addError(
-        `Klaida atsisiunčiant Excel: ${error.message}`
-      );
+    }
+  };
+
+  const startAddWorkday = (vet) => {
+    setSelectedVetForWorkday(vet);
+    setWorkdayForm({
+      date: new Date().toISOString().split("T")[0],
+      startHour: 8,
+      endHour: 18,
+    });
+    setShowWorkdayModal(true);
+  };
+
+  const saveWorkday = async (e) => {
+    e.preventDefault();
+    try {
+      const data = {
+        veterinarianId: selectedVetForWorkday.veterinarianGuid,
+        date: workdayForm.date,
+        startHour: parseInt(workdayForm.startHour),
+        endHour: parseInt(workdayForm.endHour),
+      };
+
+      const response = await fetch("http://localhost:5068/api/Visit/workday", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      // Close modal first
+      setShowWorkdayModal(false);
+      setSelectedVetForWorkday(null);
+    } catch (error) {
+      console.error("Klaida išsaugant darbo laiką:", error);
+      setShowWorkdayModal(false);
     }
   };
 
@@ -251,6 +281,12 @@ const AdminVets = () => {
                   onClick={() => startEdit(v)}
                 >
                   Redaguoti
+                </button>
+                <button
+                  className="btn primary small"
+                  onClick={() => startAddWorkday(v)}
+                >
+                  🕒 Pridėti laiką
                 </button>
                 <button
                   className="btn danger small"
@@ -512,6 +548,89 @@ const AdminVets = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showWorkdayModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowWorkdayModal(false)}
+        >
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>
+                Pridėti darbo laiką - {selectedVetForWorkday?.name}{" "}
+                {selectedVetForWorkday?.surname}
+              </h3>
+              <button
+                className="close-btn"
+                onClick={() => setShowWorkdayModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <form className="pet-form" onSubmit={saveWorkday}>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Data*</label>
+                  <input
+                    type="date"
+                    required
+                    value={workdayForm.date}
+                    onChange={(e) =>
+                      setWorkdayForm({ ...workdayForm, date: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Darbo pradžia (valanda)*</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="23"
+                    required
+                    value={workdayForm.startHour}
+                    onChange={(e) =>
+                      setWorkdayForm({
+                        ...workdayForm,
+                        startHour: e.target.value,
+                      })
+                    }
+                    placeholder="8"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Darbo pabaiga (valanda)*</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="23"
+                    required
+                    value={workdayForm.endHour}
+                    onChange={(e) =>
+                      setWorkdayForm({
+                        ...workdayForm,
+                        endHour: e.target.value,
+                      })
+                    }
+                    placeholder="18"
+                  />
+                </div>
+              </div>
+              <div className="form-actions">
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={() => setShowWorkdayModal(false)}
+                >
+                  Atšaukti
+                </button>
+                <button type="submit" className="btn primary">
+                  Išsaugoti
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
