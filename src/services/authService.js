@@ -160,20 +160,9 @@ export const authService = {
       const token = response?.AccessToken || response?.accessToken || response?.token || response?.Token || response?.access_token
 
       if (token) {
-        apiClient.setAuthToken(token)
-        localStorage.setItem('auth_token', token)
-        localStorage.setItem('authToken', token)
-
-        try {
-          const me = await apiClient.get('/users/me')
-          const user = me || { id: response?.UserId, email: response?.Email, role: response?.Role }
-          localStorage.setItem('user_data', JSON.stringify(user))
-          return { token, user }
-        } catch (err) {
-          const user = { id: response?.UserId, email: response?.Email, role: response?.Role }
-          localStorage.setItem('user_data', JSON.stringify(user))
-          return { token, user }
-        }
+        // Do NOT store token or authenticate user
+        // User must login manually after registration
+        return { token, success: true }
       }
 
       const serverMsg = response?.message || response?.error || response?.Message || null

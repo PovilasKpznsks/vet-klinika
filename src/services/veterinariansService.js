@@ -6,10 +6,12 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5068/api'
 export const veterinariansService = {
   async getAll(params = {}) {
     const query = new URLSearchParams(params).toString()
-    return await apiWrapper.executeWithNotification(
+    const response = await apiWrapper.executeWithNotification(
       () => apiClient.get(`/Veterinarian${query ? `?${query}` : ''}`),
       { operation: 'fetch', entityType: 'veterinarai', showSuccess: false, showError: true }
     )
+    // Extract data from wrapper response
+    return response?.data || response || []
   },
   async getById(id) {
     return await apiWrapper.executeWithNotification(

@@ -5,7 +5,7 @@ export const visitsService = {
   // Gauti visus vartotojo vizitus
   async getVisits(params = {}) {
     const queryParams = new URLSearchParams(params).toString()
-    return await apiClient.get(`/visits${queryParams ? `?${queryParams}` : ''}`)
+    return await apiClient.get(`/visit${queryParams ? `?${queryParams}` : ''}`)
   },
 
   // Gauti konkretų vizitą
@@ -15,7 +15,7 @@ export const visitsService = {
 
   // Sukurti naują vizitą (registracija)
   async createVisit(visitData) {
-    return await apiClient.post('/visits', visitData)
+    return await apiClient.post('/visit', visitData)
   },
 
   // Atnaujinti vizitą
@@ -24,8 +24,8 @@ export const visitsService = {
   },
 
   // Atšaukti vizitą
-  async cancelVisit(visitId, reason) {
-    return await apiClient.patch(`/visits/${visitId}/cancel`, { reason })
+  async cancelVisit(visitId) {
+    return await apiClient.post(`/visit/cancel`, { id: visitId })
   },
 
   // Gauti būsimus vizitus
@@ -52,6 +52,21 @@ export const visitsService = {
   // Gauti vizito rezultatus/išrašą
   async getVisitResults(visitId) {
     return await apiClient.get(`/visits/${visitId}/results`)
+  },
+
+  // Gauti veterinaro darbo valandas
+  async getWorkday(veterinarianId) {
+    return await apiClient.get(`/visit/workday?VeterinarianId=${veterinarianId}`)
+  },
+
+  // Sukurti veterinaro darbo dieną
+  async createWorkday(workdayData) {
+    return await apiClient.post('/visit/workday', workdayData)
+  },
+
+  // Ištrinti veterinaro darbo dieną
+  async deleteWorkday(veterinarianId, date) {
+    return await apiClient.delete(`/visit/workday?VeterinarianId=${veterinarianId}&Date=${date}`)
   }
 }
 

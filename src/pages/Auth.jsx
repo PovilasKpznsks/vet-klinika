@@ -171,12 +171,14 @@ const Auth = ({ onAuthSuccess }) => {
         Email: rest.email,
         Password: rest.password,
         PhoneNumber: rest.phone,
-        PhotoUrl: rest.photoUrl || ""
+        PhotoUrl: rest.photoUrl || "",
       };
       const result = await contextRegister(userData);
 
       if (result.success) {
-        notificationService.addSuccess("Registracija sėkminga! Sveiki atvykę!");
+        notificationService.addSuccess(
+          "Registracija sėkminga! Dabar galite prisijungti."
+        );
         // Reset form
         setRegisterData({
           firstName: "",
@@ -188,13 +190,8 @@ const Auth = ({ onAuthSuccess }) => {
           agreeToTerms: false,
           agreeToPrivacy: false,
         });
-        // Call success callback
-        if (onAuthSuccess) {
-          onAuthSuccess(result.user);
-        } else {
-          // Fallback: reload so app picks up new auth state
-          window.location.reload();
-        }
+        // Switch to login view
+        setIsLogin(true);
       }
     } catch (error) {
       console.error("Registration error:", error);

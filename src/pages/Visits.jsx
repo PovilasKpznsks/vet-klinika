@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import visitsService from "../services/visitsService";
+import veterinariansService from "../services/veterinariansService";
 import "../styles/Visits.css";
 
 // Role types: 0 = Administrator, 1 = Veterinarian, 2 = Client
@@ -14,240 +15,223 @@ const Visits = () => {
   const { user } = useAuth();
   const isAdmin = user?.role === ROLE_TYPES.Administrator;
   const [visits, setVisits] = useState([]);
+  const [veterinarians, setVeterinarians] = useState([]);
   const [showNewVisitForm, setShowNewVisitForm] = useState(false);
   const [selectedVisit, setSelectedVisit] = useState(null);
-  const [editingVisit, setEditingVisit] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("all");
   const [sortBy, setSortBy] = useState("date");
   const [selectedVeterinarian, setSelectedVeterinarian] = useState(""); // Admin veterinaro pasirinkimas
   const [newVisit, setNewVisit] = useState({
-    veterinarianId: "",
-    doctorName: "",
-    specialty: "",
-    date: "",
-    time: "",
-    reason: "",
-    symptoms: "",
-    notes: "",
-    type: "consultation",
+    veterinarianUuid: "",
+    userUuid: "",
+    type: 0, // Preventive
+    start: "",
+    end: "",
+    location: "",
+    price: 0,
   });
+  const [selectedDate, setSelectedDate] = useState("");
 
   const [availableSlots, setAvailableSlots] = useState([]);
 
+  // Load veterinarians on component mount
+  useEffect(() => {
+    loadVeterinarians();
+    loadVisits();
+  }, []);
+
+  const loadVeterinarians = async () => {
+    try {
+      const data = await veterinariansService.getAll();
+      console.log("Veterinarians data received:", data);
+      // Ensure data is an array
+      if (Array.isArray(data)) {
+        setVeterinarians(data);
+        console.log("Set veterinarians:", data.length, "items");
+      } else {
+        console.warn("Veterinarians data is not an array:", data);
+        setVeterinarians([]);
+      }
+    } catch (error) {
+      console.error("Klaida įkeliant veterinarų duomenis:", error);
+      setVeterinarians([]);
+    }
+  };
+
   // Atnaujinti laisvus laikus kai pasikeičia veterinaras ar data
   useEffect(() => {
-    if (newVisit.veterinarianId && newVisit.date) {
-      const slots = getAvailableTimeSlots(
-        newVisit.veterinarianId,
-        newVisit.date
-      );
-      setAvailableSlots(slots);
-      // Išvalyti pasirinktą laiką jei jis nebeprieinamas
-      if (newVisit.time) {
-        const selectedSlot = slots.find((s) => s.time === newVisit.time);
-        if (!selectedSlot || !selectedSlot.available) {
-          setNewVisit((prev) => ({ ...prev, time: "" }));
-        }
-      }
+    if (newVisit.veterinarianUuid && selectedDate) {
+      loadAvailableSlots(newVisit.veterinarianUuid, selectedDate);
     } else {
       setAvailableSlots([]);
     }
-  }, [newVisit.veterinarianId, newVisit.date, visits]);
+  }, [newVisit.veterinarianUuid, selectedDate]);
 
-  // Veterinarų sąrašas su darbo valandomis
-  const veterinarians = [
-    {
-      id: 1,
-      name: "Dr. Petras Petraitis",
-      specialty: "Chirurgas",
-      workDays: [1, 2, 3, 4, 5], // Pirmadienis-Penktadienis
-      workHours: { start: "09:00", end: "17:00" },
-    },
-    {
-      id: 2,
-      name: "Dr. Ana Kazlienė",
-      specialty: "Kardiologas",
-      workDays: [1, 2, 3, 4, 5],
-      workHours: { start: "10:00", end: "18:00" },
-    },
-    {
-      id: 3,
-      name: "Dr. Jonas Jonaitis",
-      specialty: "Dermatologas",
-      workDays: [2, 3, 4, 5, 6], // Antradienis-Šeštadienis
-      workHours: { start: "08:00", end: "16:00" },
-    },
-  ];
+  const loadAvailableSlots = async (veterinarianUuid, dateString) => {
+    try {
+      // Get veterinarian's workday schedule from backend
+      const workdayData = await visitsService.getWorkday(veterinarianUuid);
 
-  const specialties = [
-    "Chirurgas",
-    "Kardiologas",
-    "Dermatologas",
-    "Oftalmologas",
-    "Ortopedas",
-  ];
-
-  // Generuoti laisvus laikus pagal veterinarą ir datą
-  const getAvailableTimeSlots = (veterinarianId, selectedDate) => {
-    if (!veterinarianId || !selectedDate) return [];
-
-    const vet = veterinarians.find((v) => v.id === parseInt(veterinarianId));
-    if (!vet) return [];
-
-    const date = new Date(selectedDate);
-    const dayOfWeek = date.getDay();
-
-    // Tikrinti ar veterinaras dirba tą dieną
-    if (!vet.workDays.includes(dayOfWeek)) {
-      return [];
-    }
-
-    // Generuoti laiko intervalus (kas 30 min)
-    const slots = [];
-    const [startHour, startMin] = vet.workHours.start.split(":").map(Number);
-    const [endHour, endMin] = vet.workHours.end.split(":").map(Number);
-
-    let currentHour = startHour;
-    let currentMin = startMin;
-
-    while (
-      currentHour < endHour ||
-      (currentHour === endHour && currentMin < endMin)
-    ) {
-      const timeStr = `${String(currentHour).padStart(2, "0")}:${String(
-        currentMin
-      ).padStart(2, "0")}`;
-
-      // Tikrinti ar šis laikas jau užimtas
-      const isOccupied = visits.some(
-        (visit) =>
-          visit.doctorName === vet.name &&
-          visit.date === selectedDate &&
-          visit.time === timeStr &&
-          visit.status !== "cancelled"
-      );
-
-      slots.push({
-        time: timeStr,
-        available: !isOccupied,
-      });
-
-      // Pridėti 30 min
-      currentMin += 30;
-      if (currentMin >= 60) {
-        currentMin = 0;
-        currentHour++;
+      if (!workdayData || !workdayData.workHours) {
+        setAvailableSlots([]);
+        return;
       }
-    }
 
-    return slots;
+      const selectedDate = new Date(dateString);
+      const dateOnly = `${selectedDate.getFullYear()}-${String(
+        selectedDate.getMonth() + 1
+      ).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
+
+      // Find working hours for the selected date
+      const workHoursForDate = workdayData.workHours[dateOnly];
+
+      if (
+        !workHoursForDate ||
+        !Array.isArray(workHoursForDate) ||
+        workHoursForDate.length === 0
+      ) {
+        setAvailableSlots([]);
+        return;
+      }
+
+      // workHoursForDate is an array of all working hours, e.g., [8, 9, 10, 11, ...]
+      // Generate time slots (every hour)
+      const slots = [];
+      for (const hour of workHoursForDate) {
+        const timeStr = `${String(hour).padStart(2, "0")}:00`;
+        const slotDateTime = new Date(dateString);
+        slotDateTime.setHours(hour, 0, 0, 0);
+
+        // Check if this slot is already occupied by a visit
+        const isOccupied = visits.some((visit) => {
+          if (!visit.start || visit.veterinarianUuid !== veterinarianUuid)
+            return false;
+          const visitStart = new Date(visit.start);
+          const visitEnd = new Date(visit.end);
+          return slotDateTime >= visitStart && slotDateTime < visitEnd;
+        });
+
+        slots.push({
+          time: timeStr,
+          datetime: slotDateTime.toISOString(),
+          available: !isOccupied,
+        });
+      }
+
+      setAvailableSlots(slots);
+    } catch (error) {
+      console.error("Klaida įkeliant laisvus laikus:", error);
+      setAvailableSlots([]);
+    }
   };
 
   const visitTypes = [
-    { value: "consultation", label: "Konsultacija" },
-    { value: "examination", label: "Tyrimas" },
-    { value: "procedure", label: "Procedūra" },
-    { value: "surgery", label: "Operacija" },
-    { value: "followup", label: "Pakartotinis vizitas" },
+    { value: 0, label: "Profilaktinis" },
+    { value: 1, label: "Gydymo" },
+    { value: 2, label: "Chirurginis" },
+    { value: 3, label: "Diagnostinis" },
+    { value: 4, label: "Reabilitacinis" },
   ];
-
-  useEffect(() => {
-    loadVisits();
-  }, []);
 
   const loadVisits = async () => {
     try {
       setLoading(true);
-      const data = await visitsService.getVisits().catch(() => getMockVisits());
-      setVisits(data);
+      const response = await visitsService.getVisits();
+      console.log("Visits data received:", response);
+      // Backend returns {success, data} wrapper
+      const data = response?.data || response || [];
+      console.log("Extracted visits:", data);
+      setVisits(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Klaida įkeliant vizitų duomenis:", error);
-      setVisits(getMockVisits());
+      setVisits([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const getMockVisits = () => [
-    {
-      id: 1,
-      doctorName: "Dr. Petras Petraitis",
-      specialty: "Šeimos gydytojas",
-      date: "2024-01-15",
-      time: "14:30",
-      reason: "Profilaktinis patikrinimas",
-      symptoms: "Bendras nuovargis, galvos skausmai",
-      diagnosis: "Arterinė hipertenzija",
-      treatment: "Paskirti vaistai nuo spaudimo, dietos rekomendacijos",
-      status: "completed",
-      type: "consultation",
-      notes: "Rekomenduojama pakartoti vizitą po mėnesio",
-      createdAt: "2024-01-15T14:30:00Z",
-    },
-    {
-      id: 2,
-      doctorName: "Dr. Ana Kazlienė",
-      specialty: "Kardiologas",
-      date: "2024-02-03",
-      time: "10:15",
-      reason: "Širdies ritmo sutrikimai",
-      symptoms: "Širdies plakimas, dusulys",
-      diagnosis: "Širdies aritmija",
-      treatment: "EKG tyrimas, beta-blokatorių skyrimas",
-      status: "completed",
-      type: "examination",
-      notes: "Reikalingas kardiologinis stebėjimas",
-      createdAt: "2024-02-03T10:15:00Z",
-    },
-    {
-      id: 3,
-      doctorName: "Dr. Jonas Jonaitis",
-      specialty: "Dermatologas",
-      date: "2024-12-20",
-      time: "16:00",
-      reason: "Odos bėrimų tyrimas",
-      symptoms: "Niežulys, raudonos dėmės",
-      status: "scheduled",
-      type: "consultation",
-      notes: "Būtina atsinešti ankstesnių tyrimų rezultatus",
-      createdAt: "2024-12-06T12:00:00Z",
-    },
-  ];
-
   const handleNewVisitSubmit = async (e) => {
     e.preventDefault();
     try {
+      if (!newVisit.start || !newVisit.end) {
+        alert("Prašome pasirinkti datą ir laiką");
+        return;
+      }
+
+      if (!newVisit.veterinarianUuid) {
+        alert("Prašome pasirinkti veterinarą");
+        return;
+      }
+
+      // Get user UUID from user object
+      let userUuid = user?.userGuid || user?.uuid || user?.id || user?.userUUID;
+
+      console.log("Checking user UUID:", {
+        userGuid: user?.userGuid,
+        uuid: user?.uuid,
+        id: user?.id,
+        userUUID: user?.userUUID,
+        finalUserUuid: userUuid,
+      });
+
+      // If still no UUID, try to get from stored user data
+      if (!userUuid || userUuid === "") {
+        const storedUser = localStorage.getItem("user_data");
+        if (storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            userUuid =
+              parsedUser?.userGuid ||
+              parsedUser?.uuid ||
+              parsedUser?.id ||
+              parsedUser?.userUUID;
+            console.log("Got UUID from localStorage:", userUuid);
+          } catch (e) {
+            console.error("Error parsing stored user:", e);
+          }
+        }
+      }
+
+      if (!userUuid || userUuid === "") {
+        alert("Nerastas vartotojo ID. Prašome prisijungti iš naujo.");
+        console.error("No user UUID found. User object:", user);
+        return;
+      }
+
       const visitData = {
-        ...newVisit,
-        status: "scheduled",
-        createdAt: new Date().toISOString(),
+        type: parseInt(newVisit.type),
+        start: newVisit.start,
+        end: newVisit.end,
+        location: newVisit.location || "Klinika",
+        price: parseFloat(newVisit.price) || 50.0,
+        veterinarianUuid: newVisit.veterinarianUuid,
+        userUuid: userUuid,
       };
 
-      await visitsService.createVisit(visitData).catch(() => {
-        // Mock pridėjimas
-        const mockVisit = {
-          ...visitData,
-          id: visits.length + 1,
-        };
-        setVisits([...visits, mockVisit]);
-      });
+      console.log("Sending visit data:", visitData);
+      console.log("User object:", user);
+
+      await visitsService.createVisit(visitData);
 
       setNewVisit({
-        doctorName: "",
-        specialty: "",
-        date: "",
-        time: "",
-        reason: "",
-        symptoms: "",
-        notes: "",
-        type: "consultation",
+        veterinarianUuid: "",
+        userUuid: "",
+        type: 0,
+        start: "",
+        end: "",
+        location: "",
+        price: 0,
       });
+      setSelectedDate("");
       setShowNewVisitForm(false);
+      await loadVisits(); // Reload visits after creation
       alert("Vizitas sėkmingai užregistruotas!");
     } catch (error) {
       console.error("Klaida registruojant vizitą:", error);
-      alert("Klaida registruojant vizitą");
+      alert(
+        "Klaida registruojant vizitą: " + (error.message || "Nežinoma klaida")
+      );
     }
   };
 
@@ -283,66 +267,38 @@ const Visits = () => {
 
   const filteredVisits = visits
     .filter((visit) => {
-      // Jei admin, rodyti tik pasirinkto veterinaro vizitus
-      if (isAdmin) {
-        if (!selectedVeterinarian) return false;
-        const vet = veterinarians.find(
-          (v) => v.id === parseInt(selectedVeterinarian)
-        );
-        if (!vet || visit.doctorName !== vet.name) return false;
+      // Admin filter by selected veterinarian
+      if (isAdmin && selectedVeterinarian) {
+        if (visit.veterinarianUuid !== selectedVeterinarian) return false;
       }
-      // Filtruoti pagal būseną
-      return filterStatus === "all" || visit.status === filterStatus;
+      // Filter by status - backend doesn't return status, so skip this filter for now
+      return true;
     })
     .sort((a, b) => {
       if (sortBy === "date") {
-        return new Date(b.date) - new Date(a.date);
+        return new Date(b.start) - new Date(a.start);
       }
-      return a[sortBy]?.localeCompare(b[sortBy]) || 0;
+      return 0;
     });
+
+  console.log("Visits rendering info:", {
+    totalVisits: visits.length,
+    filteredVisits: filteredVisits.length,
+    isAdmin,
+    selectedVeterinarian,
+    user: user,
+  });
 
   const cancelVisit = async (visitId) => {
     if (window.confirm("Ar tikrai norite atšaukti šį vizitą?")) {
       try {
-        await visitsService.cancelVisit(visitId).catch(() => {
-          // Mock atnaujinimas
-          setVisits(
-            visits.map((visit) =>
-              visit.id === visitId ? { ...visit, status: "cancelled" } : visit
-            )
-          );
-        });
+        await visitsService.cancelVisit(visitId);
+        await loadVisits(); // Reload visits
         alert("Vizitas sėkmingai atšauktas");
       } catch (error) {
         console.error("Klaida atšaukiant vizitą:", error);
+        alert("Nepavyko atšaukti vizito");
       }
-    }
-  };
-
-  const beginEditVisit = (visit) => {
-    setEditingVisit({ ...visit });
-    setShowNewVisitForm(false);
-    setSelectedVisit(null);
-  };
-
-  const saveEditVisit = async (e) => {
-    e.preventDefault();
-    if (!editingVisit) return;
-    try {
-      await visitsService
-        .updateVisit(editingVisit.id, editingVisit)
-        .catch(() => {
-          // Mock update
-          setVisits((prev) =>
-            prev.map((v) =>
-              v.id === editingVisit.id ? { ...editingVisit } : v
-            )
-          );
-        });
-      setEditingVisit(null);
-      alert("Vizitas atnaujintas");
-    } catch (err) {
-      alert("Nepavyko atnaujinti vizito");
     }
   };
 
@@ -453,11 +409,12 @@ const Visits = () => {
             }}
           >
             <option value="">-- Pasirinkite veterinarą --</option>
-            {veterinarians.map((vet) => (
-              <option key={vet.id} value={vet.id}>
-                {vet.name} - {vet.specialty}
-              </option>
-            ))}
+            {Array.isArray(veterinarians) &&
+              veterinarians.map((vet) => (
+                <option key={vet.veterinarianGuid} value={vet.veterinarianGuid}>
+                  {vet.name} {vet.surname} - {vet.rank || "Veterinaras"}
+                </option>
+              ))}
           </select>
         </div>
       )}
@@ -513,69 +470,85 @@ const Visits = () => {
             <p>Vizitų nerasta.</p>
           </div>
         ) : (
-          filteredVisits.map((visit) => (
-            <div key={visit.id} className="visit-card">
-              <div className="visit-main-info">
-                <div className="visit-header">
-                  <h3>{visit.doctorName}</h3>
-                  <span
-                    className="status-badge"
-                    style={{ backgroundColor: getStatusColor(visit.status) }}
-                  >
-                    {getStatusLabel(visit.status)}
-                  </span>
-                </div>
+          filteredVisits.map((visit) => {
+            const vet = Array.isArray(veterinarians)
+              ? veterinarians.find(
+                  (v) => v.veterinarianGuid === visit.veterinarianUuid
+                )
+              : null;
+            const startDate = new Date(visit.start);
+            const endDate = new Date(visit.end);
 
-                <div className="visit-details">
-                  <div className="detail-row">
-                    <span className="label">Sritis:</span>
-                    <span>{visit.specialty}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="label">Data:</span>
-                    <span>
-                      {new Date(visit.date).toLocaleDateString("lt-LT")}
+            return (
+              <div key={visit.id} className="visit-card">
+                <div className="visit-main-info">
+                  <div className="visit-header">
+                    <h3>
+                      {vet ? `${vet.name} ${vet.surname}` : "Veterinaras"}
+                    </h3>
+                    <span
+                      className="status-badge"
+                      style={{ backgroundColor: "#17a2b8" }}
+                    >
+                      Suplanuotas
                     </span>
                   </div>
-                  <div className="detail-row">
-                    <span className="label">Laikas:</span>
-                    <span>{visit.time}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="label">Tipas:</span>
-                    <span>{getTypeLabel(visit.type)}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="label">Priežastis:</span>
-                    <span>{visit.reason}</span>
+
+                  <div className="visit-details">
+                    <div className="detail-row">
+                      <span className="label">Specializacija:</span>
+                      <span>{vet?.rank || "N/A"}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="label">Data:</span>
+                      <span>{startDate.toLocaleDateString("lt-LT")}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="label">Laikas:</span>
+                      <span>
+                        {startDate.toLocaleTimeString("lt-LT", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}{" "}
+                        -{" "}
+                        {endDate.toLocaleTimeString("lt-LT", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="label">Tipas:</span>
+                      <span>{getTypeLabel(visit.type)}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="label">Vieta:</span>
+                      <span>{visit.location}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="label">Kaina:</span>
+                      <span>{visit.price} €</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="visit-actions">
-                <button
-                  className="btn secondary"
-                  onClick={() => setSelectedVisit(visit)}
-                >
-                  Peržiūrėti
-                </button>
-                <button
-                  className="btn secondary"
-                  onClick={() => beginEditVisit(visit)}
-                >
-                  Redaguoti
-                </button>
-                {visit.status === "scheduled" && (
+                <div className="visit-actions">
+                  <button
+                    className="btn secondary"
+                    onClick={() => setSelectedVisit(visit)}
+                  >
+                    Peržiūrėti
+                  </button>
                   <button
                     className="btn danger"
                     onClick={() => cancelVisit(visit.id)}
                   >
                     Atšaukti
                   </button>
-                )}
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -602,25 +575,41 @@ const Visits = () => {
                   <label>Veterinaras*</label>
                   <select
                     required
-                    value={newVisit.veterinarianId}
+                    value={newVisit.veterinarianUuid}
                     onChange={(e) => {
-                      const vet = veterinarians.find(
-                        (v) => v.id === parseInt(e.target.value)
-                      );
                       setNewVisit({
                         ...newVisit,
-                        veterinarianId: e.target.value,
-                        doctorName: vet ? vet.name : "",
-                        specialty: vet ? vet.specialty : "",
+                        veterinarianUuid: e.target.value,
                       });
                     }}
                   >
                     <option value="">Pasirinkite veterinarą</option>
-                    {veterinarians.map((vet) => (
-                      <option key={vet.id} value={vet.id}>
-                        {vet.name} - {vet.specialty}
-                      </option>
-                    ))}
+                    {(() => {
+                      console.log(
+                        "Rendering veterinarians dropdown:",
+                        veterinarians
+                      );
+                      if (!Array.isArray(veterinarians)) {
+                        console.log("Veterinarians is not an array!");
+                        return null;
+                      }
+                      if (veterinarians.length === 0) {
+                        console.log("Veterinarians array is empty!");
+                        return null;
+                      }
+                      return veterinarians.map((vet) => {
+                        console.log("Rendering vet:", vet);
+                        return (
+                          <option
+                            key={vet.veterinarianGuid}
+                            value={vet.veterinarianGuid}
+                          >
+                            {vet.name} {vet.surname} -{" "}
+                            {vet.rank || "Veterinaras"}
+                          </option>
+                        );
+                      });
+                    })()}
                   </select>
                 </div>
               </div>
@@ -631,10 +620,16 @@ const Visits = () => {
                   <input
                     type="date"
                     required
-                    value={newVisit.date}
-                    onChange={(e) =>
-                      setNewVisit({ ...newVisit, date: e.target.value })
-                    }
+                    value={selectedDate}
+                    onChange={(e) => {
+                      const dateValue = e.target.value;
+                      setSelectedDate(dateValue);
+                      setNewVisit({
+                        ...newVisit,
+                        start: "",
+                        end: "",
+                      });
+                    }}
                     min={new Date().toISOString().split("T")[0]}
                   />
                 </div>
@@ -643,21 +638,29 @@ const Visits = () => {
                   <label>Laikas*</label>
                   <select
                     required
-                    value={newVisit.time}
-                    onChange={(e) =>
-                      setNewVisit({ ...newVisit, time: e.target.value })
-                    }
-                    disabled={!newVisit.veterinarianId || !newVisit.date}
+                    value={newVisit.start || ""}
+                    onChange={(e) => {
+                      const startDateTime = e.target.value;
+                      const endDateTime = new Date(
+                        new Date(startDateTime).getTime() + 60 * 60000
+                      ).toISOString(); // 1 hour
+                      setNewVisit({
+                        ...newVisit,
+                        start: startDateTime,
+                        end: endDateTime,
+                      });
+                    }}
+                    disabled={!newVisit.veterinarianUuid || !selectedDate}
                   >
                     <option value="">
-                      {!newVisit.veterinarianId || !newVisit.date
+                      {!newVisit.veterinarianUuid || !selectedDate
                         ? "Pirmiausia pasirinkite veterinarą ir datą"
                         : "Pasirinkite laiką"}
                     </option>
                     {availableSlots.map((slot) => (
                       <option
-                        key={slot.time}
-                        value={slot.time}
+                        key={slot.datetime}
+                        value={slot.datetime}
                         disabled={!slot.available}
                       >
                         {slot.time} {slot.available ? "" : "(užimta)"}
@@ -665,8 +668,8 @@ const Visits = () => {
                     ))}
                   </select>
                   {availableSlots.length === 0 &&
-                    newVisit.veterinarianId &&
-                    newVisit.date && (
+                    newVisit.veterinarianUuid &&
+                    selectedDate && (
                       <small style={{ color: "#dc3545", marginTop: "0.25rem" }}>
                         Veterinaras tą dieną nedirba
                       </small>
@@ -680,7 +683,7 @@ const Visits = () => {
                   required
                   value={newVisit.type}
                   onChange={(e) =>
-                    setNewVisit({ ...newVisit, type: e.target.value })
+                    setNewVisit({ ...newVisit, type: parseInt(e.target.value) })
                   }
                 >
                   {visitTypes.map((type) => (
@@ -692,39 +695,31 @@ const Visits = () => {
               </div>
 
               <div className="form-group">
-                <label>Vizito priežastis*</label>
-                <textarea
-                  required
-                  value={newVisit.reason}
+                <label>Vieta</label>
+                <input
+                  type="text"
+                  value={newVisit.location}
                   onChange={(e) =>
-                    setNewVisit({ ...newVisit, reason: e.target.value })
+                    setNewVisit({ ...newVisit, location: e.target.value })
                   }
-                  placeholder="Aprašykite vizito priežastį"
-                  rows="3"
+                  placeholder="Pvz., Klinika, Kabinetaspagerinimas #1 (neprivaloma)"
                 />
               </div>
 
               <div className="form-group">
-                <label>Simptomai</label>
-                <textarea
-                  value={newVisit.symptoms}
+                <label>Kaina (€)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={newVisit.price}
                   onChange={(e) =>
-                    setNewVisit({ ...newVisit, symptoms: e.target.value })
+                    setNewVisit({
+                      ...newVisit,
+                      price: parseFloat(e.target.value) || 0,
+                    })
                   }
-                  placeholder="Aprašykite simptomus (neprivaloma)"
-                  rows="3"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Papildomi komentarai</label>
-                <textarea
-                  value={newVisit.notes}
-                  onChange={(e) =>
-                    setNewVisit({ ...newVisit, notes: e.target.value })
-                  }
-                  placeholder="Papildoma informacija (neprivaloma)"
-                  rows="2"
+                  placeholder="50.00"
                 />
               </div>
 
@@ -764,73 +759,62 @@ const Visits = () => {
                 <h4>Pagrindinė informacija</h4>
                 <div className="detail-grid">
                   <div className="detail-item">
-                    <span className="label">Gydytojas:</span>
-                    <span>{selectedVisit.doctorName}</span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="label">Specializacija:</span>
-                    <span>{selectedVisit.specialty}</span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="label">Data:</span>
+                    <span className="label">Veterinaras:</span>
                     <span>
-                      {new Date(selectedVisit.date).toLocaleDateString("lt-LT")}
+                      {(() => {
+                        const vet = Array.isArray(veterinarians)
+                          ? veterinarians.find(
+                              (v) =>
+                                v.veterinarianGuid ===
+                                selectedVisit.veterinarianUuid
+                            )
+                          : null;
+                        return vet ? `${vet.name} ${vet.surname}` : "N/A";
+                      })()}
                     </span>
                   </div>
                   <div className="detail-item">
-                    <span className="label">Laikas:</span>
-                    <span>{selectedVisit.time}</span>
+                    <span className="label">Specializacija:</span>
+                    <span>
+                      {(() => {
+                        const vet = Array.isArray(veterinarians)
+                          ? veterinarians.find(
+                              (v) =>
+                                v.veterinarianGuid ===
+                                selectedVisit.veterinarianUuid
+                            )
+                          : null;
+                        return vet?.rank || "N/A";
+                      })()}
+                    </span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="label">Pradžia:</span>
+                    <span>
+                      {new Date(selectedVisit.start).toLocaleString("lt-LT")}
+                    </span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="label">Pabaiga:</span>
+                    <span>
+                      {new Date(selectedVisit.end).toLocaleString("lt-LT")}
+                    </span>
                   </div>
                   <div className="detail-item">
                     <span className="label">Tipas:</span>
                     <span>{getTypeLabel(selectedVisit.type)}</span>
                   </div>
                   <div className="detail-item">
-                    <span className="label">Būsena:</span>
-                    <span
-                      style={{
-                        color: getStatusColor(selectedVisit.status),
-                        fontWeight: "bold",
-                      }}
-                    >
-                      {getStatusLabel(selectedVisit.status)}
-                    </span>
+                    <span className="label">Vieta:</span>
+                    <span>{selectedVisit.location}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="label">Kaina:</span>
+                    <span>{selectedVisit.price} €</span>
                   </div>
                 </div>
               </div>
 
-              <div className="detail-section">
-                <h4>Vizito priežastis</h4>
-                <p>{selectedVisit.reason}</p>
-              </div>
-
-              {selectedVisit.symptoms && (
-                <div className="detail-section">
-                  <h4>Simptomai</h4>
-                  <p>{selectedVisit.symptoms}</p>
-                </div>
-              )}
-
-              {selectedVisit.diagnosis && (
-                <div className="detail-section">
-                  <h4>Diagnozė</h4>
-                  <p>{selectedVisit.diagnosis}</p>
-                </div>
-              )}
-
-              {selectedVisit.treatment && (
-                <div className="detail-section">
-                  <h4>Gydymas</h4>
-                  <p>{selectedVisit.treatment}</p>
-                </div>
-              )}
-
-              {selectedVisit.notes && (
-                <div className="detail-section">
-                  <h4>Papildomi komentarai</h4>
-                  <p>{selectedVisit.notes}</p>
-                </div>
-              )}
               <div className="modal-actions">
                 <button
                   className="btn secondary"
@@ -838,164 +822,8 @@ const Visits = () => {
                 >
                   Uždaryti
                 </button>
-                <button
-                  className="btn primary"
-                  onClick={() => beginEditVisit(selectedVisit)}
-                >
-                  Redaguoti vizitą
-                </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Vizito redagavimo modalas */}
-      {editingVisit && (
-        <div className="modal-overlay" onClick={() => setEditingVisit(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Redaguoti vizitą</h3>
-              <button
-                className="close-btn"
-                onClick={() => setEditingVisit(null)}
-              >
-                ×
-              </button>
-            </div>
-
-            <form className="visit-form" onSubmit={saveEditVisit}>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Gydytojo vardas*</label>
-                  <input
-                    type="text"
-                    required
-                    value={editingVisit.doctorName}
-                    onChange={(e) =>
-                      setEditingVisit({
-                        ...editingVisit,
-                        doctorName: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Specializacija*</label>
-                  <select
-                    required
-                    value={editingVisit.specialty}
-                    onChange={(e) =>
-                      setEditingVisit({
-                        ...editingVisit,
-                        specialty: e.target.value,
-                      })
-                    }
-                  >
-                    <option value="">Pasirinkite specializaciją</option>
-                    {specialties.map((specialty) => (
-                      <option key={specialty} value={specialty}>
-                        {specialty}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Data*</label>
-                  <input
-                    type="date"
-                    required
-                    value={editingVisit.date}
-                    onChange={(e) =>
-                      setEditingVisit({ ...editingVisit, date: e.target.value })
-                    }
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Laikas*</label>
-                  <input
-                    type="time"
-                    required
-                    value={editingVisit.time}
-                    onChange={(e) =>
-                      setEditingVisit({ ...editingVisit, time: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Vizito tipas*</label>
-                <select
-                  required
-                  value={editingVisit.type}
-                  onChange={(e) =>
-                    setEditingVisit({ ...editingVisit, type: e.target.value })
-                  }
-                >
-                  {visitTypes.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Vizito priežastis*</label>
-                <textarea
-                  required
-                  value={editingVisit.reason}
-                  onChange={(e) =>
-                    setEditingVisit({ ...editingVisit, reason: e.target.value })
-                  }
-                  rows="3"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Simptomai</label>
-                <textarea
-                  value={editingVisit.symptoms}
-                  onChange={(e) =>
-                    setEditingVisit({
-                      ...editingVisit,
-                      symptoms: e.target.value,
-                    })
-                  }
-                  rows="3"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Papildomi komentarai</label>
-                <textarea
-                  value={editingVisit.notes}
-                  onChange={(e) =>
-                    setEditingVisit({ ...editingVisit, notes: e.target.value })
-                  }
-                  rows="2"
-                />
-              </div>
-
-              <div className="form-actions">
-                <button
-                  type="button"
-                  className="btn secondary"
-                  onClick={() => setEditingVisit(null)}
-                >
-                  Atšaukti
-                </button>
-                <button type="submit" className="btn primary">
-                  Išsaugoti pakeitimus
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}
