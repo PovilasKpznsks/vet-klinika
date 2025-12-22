@@ -121,7 +121,14 @@ const Account = () => {
         profileResult.data &&
         typeof profileResult.data === "object"
       ) {
-        setUserData(profileResult.data);
+        // Map backend field names to frontend field names
+        setUserData({
+          firstName: profileResult.data.name || "",
+          lastName: profileResult.data.surname || "",
+          phone: profileResult.data.phoneNumber || "",
+          photoUrl: profileResult.data.photoUrl || "",
+          email: profileResult.data.email || "",
+        });
       }
 
       if (petsResult?.success) {
@@ -196,7 +203,12 @@ const Account = () => {
       }
 
       // Naudoti pagerintą userService su automatiniais pranešimais
-      const result = await userService.updateProfile({ ...userData, photoUrl });
+      const result = await userService.updateProfile({
+        name: userData.firstName || "",
+        surname: userData.lastName || "",
+        phoneNumber: userData.phone || "",
+        photoUrl: photoUrl || userData.photoUrl || "",
+      });
 
       if (result.success) {
         setIsEditing(false);

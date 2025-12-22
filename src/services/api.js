@@ -26,8 +26,11 @@ class ApiClient {
       'Content-Type': 'application/json',
     }
     
-    if (this.token) {
-      headers.Authorization = `Bearer ${this.token}`
+    // Try to get token from instance, then fallback to localStorage with both keys
+    const token = this.token || localStorage.getItem('authToken') || localStorage.getItem('auth_token');
+    
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
     }
     
     return headers
