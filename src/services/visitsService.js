@@ -20,7 +20,7 @@ export const visitsService = {
 
   // Atnaujinti vizitą
   async updateVisit(visitId, visitData) {
-    return await apiClient.put(`/visits/${visitId}`, visitData)
+    return await apiClient.put('/visit', visitData)
   },
 
   // Atšaukti vizitą

@@ -17,6 +17,7 @@ const Visits = () => {
   const [visits, setVisits] = useState([]);
   const [veterinarians, setVeterinarians] = useState([]);
   const [showNewVisitForm, setShowNewVisitForm] = useState(false);
+  const [editingVisit, setEditingVisit] = useState(null);
   const [selectedVisit, setSelectedVisit] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("all");
@@ -326,6 +327,87 @@ const Visits = () => {
     }
   };
 
+  const startEditVisit = (visit) => {
+    const visitType = visitTypes.find((t) => t.value === visit.type);
+    const startDate = new Date(visit.start);
+    const dateOnly = `${startDate.getFullYear()}-${String(
+      startDate.getMonth() + 1
+    ).padStart(2, "0")}-${String(startDate.getDate()).padStart(2, "0")}`;
+
+    // Format start and end times to match slot format (local time with +02:00 offset)
+    const formatLocalDateTime = (dateStr) => {
+      const date = new Date(dateStr);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      const seconds = String(date.getSeconds()).padStart(2, "0");
+      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+02:00`;
+    };
+
+    setEditingVisit(visit);
+    setNewVisit({
+      veterinarianUuid: visit.veterinarianUuid,
+      userUuid: visit.userUuid,
+      type: visit.type,
+      start: formatLocalDateTime(visit.start),
+      end: formatLocalDateTime(visit.end),
+      location: visit.location,
+      price: visitType?.price || visit.price,
+    });
+    setSelectedDate(dateOnly);
+    setShowNewVisitForm(true);
+
+    // Load available slots for the selected vet and date
+    if (visit.veterinarianUuid && dateOnly) {
+      loadAvailableSlots(visit.veterinarianUuid, dateOnly);
+    }
+  };
+
+  const handleUpdateVisit = async (e) => {
+    e.preventDefault();
+    try {
+      if (!newVisit.start || !newVisit.end) {
+        alert("Prašome pasirinkti datą ir laiką");
+        return;
+      }
+
+      const visitData = {
+        id: editingVisit.id,
+        type: parseInt(newVisit.type),
+        start: newVisit.start,
+        end: newVisit.end,
+        location: "Centrinė Veterinarijos klinika",
+        price: parseFloat(newVisit.price) || 50.0,
+      };
+
+      console.log("Updating visit:", visitData);
+
+      await visitsService.updateVisit(editingVisit.id, visitData);
+
+      setNewVisit({
+        veterinarianUuid: "",
+        userUuid: "",
+        type: 0,
+        start: "",
+        end: "",
+        location: "",
+        price: 35.0,
+      });
+      setSelectedDate("");
+      setShowNewVisitForm(false);
+      setEditingVisit(null);
+      await loadVisits();
+      alert("Vizitas sėkmingai atnaujintas!");
+    } catch (error) {
+      console.error("Klaida atnaujinant vizitą:", error);
+      alert(
+        "Klaida atnaujinant vizitą: " + (error.message || "Nežinoma klaida")
+      );
+    }
+  };
+
   const exportToExcel = () => {
     // Sukurti CSV formatą (Excel gali atidaryti CSV failus)
     const headers = [
@@ -564,6 +646,13 @@ const Visits = () => {
                     Peržiūrėti
                   </button>
                   <button
+                    className="btn primary"
+                    onClick={() => startEditVisit(visit)}
+                    title="Redaguoti vizitą"
+                  >
+                    ⚙️ Redaguoti
+                  </button>
+                  <button
                     className="btn danger"
                     onClick={() => cancelVisit(visit.id)}
                   >
@@ -576,24 +665,35 @@ const Visits = () => {
         )}
       </div>
 
-      {/* Naujo vizito forma */}
+      {/* Naujo/Redaguojamo vizito forma */}
       {showNewVisitForm && (
         <div
           className="modal-overlay"
-          onClick={() => setShowNewVisitForm(false)}
+          onClick={() => {
+            setShowNewVisitForm(false);
+            setEditingVisit(null);
+          }}
         >
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Registruoti naują vizitą</h3>
+              <h3>
+                {editingVisit ? "Redaguoti vizitą" : "Registruoti naują vizitą"}
+              </h3>
               <button
                 className="close-btn"
-                onClick={() => setShowNewVisitForm(false)}
+                onClick={() => {
+                  setShowNewVisitForm(false);
+                  setEditingVisit(null);
+                }}
               >
                 ×
               </button>
             </div>
 
-            <form className="visit-form" onSubmit={handleNewVisitSubmit}>
+            <form
+              className="visit-form"
+              onSubmit={editingVisit ? handleUpdateVisit : handleNewVisitSubmit}
+            >
               <div className="form-row">
                 <div className="form-group full-width">
                   <label>Veterinaras*</label>
@@ -606,6 +706,12 @@ const Visits = () => {
                         veterinarianUuid: e.target.value,
                       });
                     }}
+                    disabled={!!editingVisit}
+                    style={
+                      editingVisit
+                        ? { backgroundColor: "#f0f0f0", cursor: "not-allowed" }
+                        : {}
+                    }
                   >
                     <option value="">Pasirinkite veterinarą</option>
                     {(() => {
@@ -776,12 +882,15 @@ const Visits = () => {
                 <button
                   type="button"
                   className="btn secondary"
-                  onClick={() => setShowNewVisitForm(false)}
+                  onClick={() => {
+                    setShowNewVisitForm(false);
+                    setEditingVisit(null);
+                  }}
                 >
                   Atšaukti
                 </button>
                 <button type="submit" className="btn primary">
-                  Registruoti vizitą
+                  {editingVisit ? "Atnaujinti vizitą" : "Registruoti vizitą"}
                 </button>
               </div>
             </form>
