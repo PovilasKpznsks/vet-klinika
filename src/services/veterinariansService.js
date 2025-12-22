@@ -37,12 +37,20 @@ export const veterinariansService = {
       { operation: 'delete', entityType: 'veterinaras', showSuccess: true, showError: true, successMessage: 'Veterinaras pašalintas' }
     )
   },
-  async downloadExcel() {
+  async downloadExcel(dateRange = {}) {
     try {
+      const payload = {
+        startDate: dateRange.startDate || null,
+        endDate: dateRange.endDate || null
+      };
+      
       const response = await fetch(`${API_BASE_URL}/Veterinarian/excel`, {
+        method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('authToken')}`
-        }
+        },
+        body: JSON.stringify(payload)
       })
       if (!response.ok) throw new Error('Failed to download Excel')
       const blob = await response.blob()

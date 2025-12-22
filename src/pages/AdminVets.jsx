@@ -6,7 +6,9 @@ const AdminVets = () => {
   const [vets, setVets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
   const [form, setForm] = useState({
     name: "",
     surname: "",
@@ -175,15 +177,37 @@ const AdminVets = () => {
     }
   };
 
+  const handleDownloadExcel = async () => {
+    try {
+      await veterinariansService.downloadExcel(dateRange);
+      notificationService.addSuccess("Excel ataskaita sėkmingai atsisiųsta!");
+      setShowDownloadModal(false);
+      setDateRange({ startDate: "", endDate: "" });
+    } catch (error) {
+      console.error("Klaida atsisiunčiant Excel:", error);
+      notificationService.addError(
+        `Klaida atsisiunčiant Excel: ${error.message}`
+      );
+    }
+  };
+
   if (loading) return <div>Kraunama...</div>;
 
   return (
     <div>
       <div className="pets-header">
         <h3>Veterinarai</h3>
-        <button className="btn primary" onClick={startCreate}>
-          + Pridėti
-        </button>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button
+            className="btn secondary"
+            onClick={() => setShowDownloadModal(true)}
+          >
+            📥 Atsisiųsti Excel
+          </button>
+          <button className="btn primary" onClick={startCreate}>
+            + Pridėti
+          </button>
+        </div>
       </div>
 
       {vets.length === 0 ? (
@@ -424,6 +448,70 @@ const AdminVets = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showDownloadModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowDownloadModal(false)}
+        >
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Atsisiųsti Excel ataskaitą</h3>
+              <button
+                className="close-btn"
+                onClick={() => setShowDownloadModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="pet-form">
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Pradžios data</label>
+                  <input
+                    type="date"
+                    value={dateRange.startDate}
+                    onChange={(e) =>
+                      setDateRange({ ...dateRange, startDate: e.target.value })
+                    }
+                    placeholder="Pasirinkite pradžios datą"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Pabaigos data</label>
+                  <input
+                    type="date"
+                    value={dateRange.endDate}
+                    onChange={(e) =>
+                      setDateRange({ ...dateRange, endDate: e.target.value })
+                    }
+                    placeholder="Pasirinkite pabaigos datą"
+                  />
+                </div>
+              </div>
+              <p style={{ fontSize: "14px", color: "#666", marginTop: "10px" }}>
+                Palikite tuščius laukus, jei norite gauti visus duomenis
+              </p>
+              <div className="form-actions">
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={() => setShowDownloadModal(false)}
+                >
+                  Atšaukti
+                </button>
+                <button
+                  type="button"
+                  className="btn primary"
+                  onClick={handleDownloadExcel}
+                >
+                  Atsisiųsti
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
