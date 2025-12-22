@@ -136,17 +136,32 @@ const Visits = () => {
   };
 
   const visitTypes = [
-    { value: 0, label: "Profilaktinis" },
-    { value: 1, label: "Gydymo" },
-    { value: 2, label: "Chirurginis" },
-    { value: 3, label: "Diagnostinis" },
-    { value: 4, label: "Reabilitacinis" },
+    { value: 0, label: "Profilaktinis", price: 35.0 },
+    { value: 1, label: "Gydymo", price: 50.0 },
+    { value: 2, label: "Chirurginis", price: 150.0 },
+    { value: 3, label: "Diagnostinis", price: 45.0 },
+    { value: 4, label: "Reabilitacinis", price: 60.0 },
   ];
 
   const loadVisits = async () => {
     try {
       setLoading(true);
-      const response = await visitsService.getVisits();
+
+      // Get user ID for filtering visits
+      let userId = user?.userGuid || user?.uuid || user?.id || user?.userUUID;
+      if (!userId) {
+        const storedUser = localStorage.getItem("user_data");
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          userId =
+            parsedUser?.userGuid ||
+            parsedUser?.uuid ||
+            parsedUser?.id ||
+            parsedUser?.userUUID;
+        }
+      }
+
+      const response = await visitsService.getVisits({ UserId: userId });
       console.log("Visits data received:", response);
       // Backend returns {success, data} wrapper
       const data = response?.data || response || [];
@@ -212,7 +227,7 @@ const Visits = () => {
         type: parseInt(newVisit.type),
         start: newVisit.start,
         end: newVisit.end,
-        location: newVisit.location || "Klinika",
+        location: "Centrinė Veterinarijos klinika",
         price: parseFloat(newVisit.price) || 50.0,
         veterinarianUuid: newVisit.veterinarianUuid,
         userUuid: userUuid,
@@ -704,13 +719,21 @@ const Visits = () => {
                 <select
                   required
                   value={newVisit.type}
-                  onChange={(e) =>
-                    setNewVisit({ ...newVisit, type: parseInt(e.target.value) })
-                  }
+                  onChange={(e) => {
+                    const typeValue = parseInt(e.target.value);
+                    const selectedType = visitTypes.find(
+                      (t) => t.value === typeValue
+                    );
+                    setNewVisit({
+                      ...newVisit,
+                      type: typeValue,
+                      price: selectedType?.price || 50.0,
+                    });
+                  }}
                 >
                   {visitTypes.map((type) => (
                     <option key={type.value} value={type.value}>
-                      {type.label}
+                      {type.label} - {type.price.toFixed(2)}€
                     </option>
                   ))}
                 </select>
@@ -720,29 +743,33 @@ const Visits = () => {
                 <label>Vieta</label>
                 <input
                   type="text"
-                  value={newVisit.location}
-                  onChange={(e) =>
-                    setNewVisit({ ...newVisit, location: e.target.value })
-                  }
-                  placeholder="Pvz., Klinika, Kabinetaspagerinimas #1 (neprivaloma)"
+                  value="Centrinė Veterinarijos klinika"
+                  disabled
+                  style={{ backgroundColor: "#f0f0f0", cursor: "not-allowed" }}
                 />
               </div>
 
               <div className="form-group">
                 <label>Kaina (€)</label>
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={newVisit.price}
-                  onChange={(e) =>
-                    setNewVisit({
-                      ...newVisit,
-                      price: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  placeholder="50.00"
+                  type="text"
+                  value={newVisit.price.toFixed(2) + " €"}
+                  disabled
+                  style={{
+                    backgroundColor: "#f0f0f0",
+                    cursor: "not-allowed",
+                    color: "#333",
+                  }}
                 />
+                <small
+                  style={{
+                    color: "#666",
+                    marginTop: "0.25rem",
+                    display: "block",
+                  }}
+                >
+                  Kaina nustatyta automatiškai pagal vizito tipą
+                </small>
               </div>
 
               <div className="form-actions">
