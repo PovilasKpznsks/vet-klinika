@@ -119,11 +119,9 @@ const Diseases = () => {
           editingId,
           data
         );
-        setDiseases(
-          diseases.map((d) =>
-            d.id === editingId ? { ...updated, id: editingId } : d
-          )
-        );
+        // Reload all diseases to ensure consistency
+        const allDiseases = await diseasesService.getDiseases();
+        setDiseases(allDiseases);
         notificationService.addSuccess("Liga sėkmingai atnaujinta!");
       } else {
         const created = await diseasesService.addDiseaseRecord(data);
@@ -205,8 +203,8 @@ const Diseases = () => {
 
   const filteredDiseases = diseases.filter((disease) => {
     const matchesSearch =
-      disease.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      disease.description.toLowerCase().includes(searchTerm.toLowerCase());
+      disease.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      disease.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory =
       selectedCategory === "all" || disease.category === selectedCategory;
     return matchesSearch && matchesCategory;
