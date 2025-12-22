@@ -7,7 +7,11 @@ const AdminVets = () => {
   const [showForm, setShowForm] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [showWorkdayModal, setShowWorkdayModal] = useState(false);
+  const [showRemoveWorkdayModal, setShowRemoveWorkdayModal] = useState(false);
   const [selectedVetForWorkday, setSelectedVetForWorkday] = useState(null);
+  const [selectedVetForRemoval, setSelectedVetForRemoval] = useState(null);
+  const [workdays, setWorkdays] = useState([]);
+  const [loadingWorkdays, setLoadingWorkdays] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
   const [workdayForm, setWorkdayForm] = useState({
@@ -221,6 +225,73 @@ const AdminVets = () => {
     }
   };
 
+  const startRemoveWorkday = async (vet) => {
+    setSelectedVetForRemoval(vet);
+    setShowRemoveWorkdayModal(true);
+    setLoadingWorkdays(true);
+    try {
+      const response = await fetch(
+        `http://localhost:5068/api/Visit/workday?VeterinarianId=${vet.veterinarianGuid}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+          },
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        // Convert workHours object to array of {date, hours} objects
+        if (data && data.workHours) {
+          const workdaysArray = Object.entries(data.workHours).map(
+            ([date, hours]) => ({
+              date,
+              hours,
+            })
+          );
+          setWorkdays(workdaysArray);
+        } else {
+          setWorkdays([]);
+        }
+      } else {
+        setWorkdays([]);
+      }
+    } catch (error) {
+      console.error("Klaida įkeliant darbo laikus:", error);
+      setWorkdays([]);
+    } finally {
+      setLoadingWorkdays(false);
+    }
+  };
+
+  const deleteWorkday = async (date) => {
+    if (!date) {
+      console.error("Date is undefined");
+      return;
+    }
+
+    // Ensure date is in YYYY-MM-DD format
+    const dateOnly = date.split("T")[0];
+
+    try {
+      const response = await fetch(
+        `http://localhost:5068/api/Visit/workday?VeterinarianId=${selectedVetForRemoval.veterinarianGuid}&date=${dateOnly}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        // Refresh workdays list by removing the deleted date
+        setWorkdays(workdays.filter((w) => w.date !== date));
+      }
+    } catch (error) {
+      console.error("Klaida šalinant darbo laiką:", error);
+    }
+  };
+
   if (loading) return <div>Kraunama...</div>;
 
   return (
@@ -287,6 +358,12 @@ const AdminVets = () => {
                   onClick={() => startAddWorkday(v)}
                 >
                   🕒 Pridėti laiką
+                </button>
+                <button
+                  className="btn secondary small"
+                  onClick={() => startRemoveWorkday(v)}
+                >
+                  🗑️ Šalinti laikus
                 </button>
                 <button
                   className="btn danger small"
@@ -631,6 +708,89 @@ const AdminVets = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showRemoveWorkdayModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowRemoveWorkdayModal(false)}
+        >
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>
+                Šalinti darbo laikus - {selectedVetForRemoval?.name}{" "}
+                {selectedVetForRemoval?.surname}
+              </h3>
+              <button
+                className="close-btn"
+                onClick={() => setShowRemoveWorkdayModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="pet-form">
+              {loadingWorkdays ? (
+                <p>Kraunami darbo laikai...</p>
+              ) : !Array.isArray(workdays) || workdays.length === 0 ? (
+                <p>Nėra darbo laikų</p>
+              ) : (
+                <div style={{ maxHeight: "400px", overflowY: "auto" }}>
+                  {workdays.map((workday) => {
+                    const minHour = Math.min(...workday.hours);
+                    const maxHour = Math.max(...workday.hours);
+                    return (
+                      <div
+                        key={workday.date}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "12px",
+                          marginBottom: "8px",
+                          border: "1px solid #ddd",
+                          borderRadius: "4px",
+                        }}
+                      >
+                        <div>
+                          <strong>
+                            {new Date(workday.date).toLocaleDateString("lt-LT")}
+                          </strong>
+                          <span style={{ marginLeft: "12px" }}>
+                            {minHour}:00 - {maxHour + 1}:00
+                          </span>
+                          <span
+                            style={{
+                              marginLeft: "8px",
+                              color: "#666",
+                              fontSize: "0.9em",
+                            }}
+                          >
+                            ({workday.hours.length} val.)
+                          </span>
+                        </div>
+                        <button
+                          className="btn danger small"
+                          onClick={() => deleteWorkday(workday.date)}
+                        >
+                          Šalinti
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="form-actions" style={{ marginTop: "20px" }}>
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={() => setShowRemoveWorkdayModal(false)}
+                >
+                  Uždaryti
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

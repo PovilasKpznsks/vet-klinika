@@ -125,7 +125,9 @@ const Diseases = () => {
         notificationService.addSuccess("Liga sėkmingai atnaujinta!");
       } else {
         const created = await diseasesService.addDiseaseRecord(data);
-        setDiseases([...diseases, created]);
+        // Reload all diseases to ensure consistency
+        const allDiseases = await diseasesService.getDiseases();
+        setDiseases(allDiseases);
         notificationService.addSuccess("Liga sėkmingai pridėta!");
       }
 
