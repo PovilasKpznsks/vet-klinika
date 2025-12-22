@@ -28,6 +28,30 @@ const Diseases = () => {
     description: "",
   });
 
+  // Symptoms recommendation modal state
+  const [showSymptomsModal, setShowSymptomsModal] = useState(false);
+  const [selectedSymptoms, setSelectedSymptoms] = useState([]);
+  const [symptomMatches, setSymptomMatches] = useState(null);
+  const [searchingSymptoms, setSearchingSymptoms] = useState(false);
+
+  const availableSymptoms = [
+    "skausmas",
+    "karščiavimas",
+    "silpnumas",
+    "nuovargis",
+    "galvos skausmas",
+    "galvos svaigimas",
+    "pykinimas",
+    "vėmimas",
+    "viduriavimas",
+    "dusulys",
+    "kosulys",
+    "širdies plakimas",
+    "pilvo skausmas",
+    "drebulys",
+    "patinimas",
+  ];
+
   const categories = [
     { value: "all", label: "Visos kategorijos" },
     { value: 0, label: "Infekcija (Infection)" },
@@ -134,6 +158,51 @@ const Diseases = () => {
     }
   };
 
+  // Symptom modal handlers
+  const openSymptomsModal = () => {
+    setShowSymptomsModal(true);
+    setSelectedSymptoms([]);
+    setSymptomMatches(null);
+  };
+
+  const closeSymptomsModal = () => {
+    setShowSymptomsModal(false);
+    setSelectedSymptoms([]);
+    setSymptomMatches(null);
+  };
+
+  const toggleSymptom = (symptom) => {
+    setSelectedSymptoms((prev) =>
+      prev.includes(symptom)
+        ? prev.filter((s) => s !== symptom)
+        : [...prev, symptom]
+    );
+  };
+
+  const searchBySymptoms = async () => {
+    if (selectedSymptoms.length === 0) {
+      notificationService.addWarning("Pasirinkite bent vieną simptomą");
+      return;
+    }
+
+    try {
+      setSearchingSymptoms(true);
+      const result = await diseasesService.findDiseasesBySymptoms(
+        selectedSymptoms
+      );
+      setSymptomMatches(result);
+
+      if (result.matches && result.matches.length === 0) {
+        notificationService.addInfo("Ligų pagal pasirinktus simptomus nerasta");
+      }
+    } catch (err) {
+      console.error("Error searching diseases by symptoms:", err);
+      notificationService.addError(`Klaida ieškant ligų: ${err.message}`);
+    } finally {
+      setSearchingSymptoms(false);
+    }
+  };
+
   const filteredDiseases = diseases.filter((disease) => {
     const matchesSearch =
       disease.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -187,15 +256,16 @@ const Diseases = () => {
       <div className="diseases-header">
         <h2>Ligų duomenų bazė</h2>
         <p>Ieškokite informacijos apie ligas, jų simptomus ir gydymo metodus</p>
-        {isAdmin && (
-          <button
-            className="btn primary"
-            onClick={startCreate}
-            style={{ marginTop: "1rem" }}
-          >
-            + Pridėti ligą
+        <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
+          {isAdmin && (
+            <button className="btn primary" onClick={startCreate}>
+              + Pridėti ligą
+            </button>
+          )}
+          <button className="btn secondary" onClick={openSymptomsModal}>
+            Atidaryti ligos rekomendacijos langą
           </button>
-        )}
+        </div>
       </div>
 
       <div className="search-filters">
@@ -448,6 +518,145 @@ const Diseases = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Symptoms recommendation modal */}
+      {showSymptomsModal && (
+        <div className="modal-overlay" onClick={closeSymptomsModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Ligų paieška pagal simptomus</h2>
+              <button className="close-btn" onClick={closeSymptomsModal}>
+                ×
+              </button>
+            </div>
+
+            <div className="modal-body">
+              {!symptomMatches ? (
+                <>
+                  <p style={{ marginBottom: "1.5rem" }}>
+                    Pasirinkite simptomus, kurie pasireiškia:
+                  </p>
+
+                  <div className="symptoms-grid">
+                    {availableSymptoms.map((symptom) => (
+                      <label key={symptom} className="symptom-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={selectedSymptoms.includes(symptom)}
+                          onChange={() => toggleSymptom(symptom)}
+                        />
+                        <span>{symptom}</span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="selected-count">
+                    Pasirinkta simptomų: {selectedSymptoms.length}
+                  </div>
+
+                  <div className="modal-actions">
+                    <button
+                      className="btn secondary"
+                      onClick={closeSymptomsModal}
+                    >
+                      Atšaukti
+                    </button>
+                    <button
+                      className="btn primary"
+                      onClick={searchBySymptoms}
+                      disabled={
+                        selectedSymptoms.length === 0 || searchingSymptoms
+                      }
+                    >
+                      {searchingSymptoms ? "Ieškoma..." : "Ieškoti ligų"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="results-header">
+                    <h3>{symptomMatches.message || "Rezultatai"}</h3>
+                    <button
+                      className="btn secondary"
+                      onClick={() => setSymptomMatches(null)}
+                    >
+                      ← Grįžti į paiešką
+                    </button>
+                  </div>
+
+                  {symptomMatches.matches &&
+                  symptomMatches.matches.length > 0 ? (
+                    <div className="matches-list">
+                      {symptomMatches.matches.map((match) => (
+                        <div key={match.id} className="match-card">
+                          <div className="match-header">
+                            <h4>{match.name}</h4>
+                            {match.latinName && (
+                              <p className="latin-name">{match.latinName}</p>
+                            )}
+                          </div>
+
+                          <p className="match-description">
+                            {match.description}
+                          </p>
+
+                          <div className="match-stats">
+                            <div className="stat">
+                              <span className="label">Atitikimas:</span>
+                              <span className="value">
+                                {match.matchPercentage}%
+                              </span>
+                            </div>
+                            <div className="stat">
+                              <span className="label">
+                                Sutampančių simptomų:
+                              </span>
+                              <span className="value">{match.matchCount}</span>
+                            </div>
+                            <div className="stat">
+                              <span className="label">Kategorija:</span>
+                              <span className="value">
+                                {getCategoryLabel(match.category)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {match.matchedSymptoms &&
+                            match.matchedSymptoms.length > 0 && (
+                              <div className="matched-symptoms">
+                                <strong>Sutampantys simptomai:</strong>
+                                <div className="symptoms-tags">
+                                  {match.matchedSymptoms.map((symptom, idx) => (
+                                    <span key={idx} className="symptom-tag">
+                                      {symptom}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="no-results">
+                      <p>Ligų pagal pasirinktus simptomus nerasta.</p>
+                    </div>
+                  )}
+
+                  <div className="modal-actions">
+                    <button
+                      className="btn primary"
+                      onClick={closeSymptomsModal}
+                    >
+                      Uždaryti
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}

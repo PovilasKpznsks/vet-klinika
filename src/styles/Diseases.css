@@ -519,3 +519,181 @@
     display: none;
   }
 }
+
+/* Symptoms Modal Styles */
+.symptoms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.symptom-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+}
+
+.symptom-checkbox:hover {
+  background: #e9ecef;
+  border-color: #2c5f2d;
+}
+
+.symptom-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #2c5f2d;
+}
+
+.symptom-checkbox input[type="checkbox"]:checked + span {
+  font-weight: 600;
+  color: #2c5f2d;
+}
+
+.symptom-checkbox span {
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.selected-count {
+  text-align: center;
+  padding: 1rem;
+  background: #e3f2e3;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  color: #2c5f2d;
+  font-size: 1.1rem;
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.results-header h3 {
+  color: #2c5f2d;
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.matches-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.match-card {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border-left: 4px solid #2c5f2d;
+  transition: all 0.3s;
+}
+
+.match-card:hover {
+  box-shadow: 0 4px 12px rgba(44, 95, 45, 0.15);
+  transform: translateY(-2px);
+}
+
+.match-header h4 {
+  color: #2c5f2d;
+  font-size: 1.3rem;
+  margin: 0 0 0.25rem 0;
+}
+
+.match-header .latin-name {
+  color: #666;
+  font-style: italic;
+  font-size: 0.9rem;
+  margin: 0 0 1rem 0;
+}
+
+.match-description {
+  color: #333;
+  line-height: 1.6;
+  margin: 1rem 0;
+}
+
+.match-stats {
+  display: flex;
+  gap: 2rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+}
+
+.match-stats .stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.match-stats .stat .label {
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.match-stats .stat .value {
+  font-size: 1.1rem;
+  color: #2c5f2d;
+  font-weight: 700;
+}
+
+.matched-symptoms {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #dee2e6;
+}
+
+.matched-symptoms strong {
+  display: block;
+  margin-bottom: 0.75rem;
+  color: #2c5f2d;
+}
+
+.symptoms-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.symptom-tag {
+  background: #2c5f2d;
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.no-results {
+  text-align: center;
+  padding: 3rem;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.no-results p {
+  color: #666;
+  font-size: 1.1rem;
+  margin: 0;
+}

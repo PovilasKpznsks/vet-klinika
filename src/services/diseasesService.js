@@ -91,6 +91,11 @@ export const diseasesService = {
   // Gauti ligos gydymo informaciją
   async getDiseaseTreatment(diseaseId) {
     return await apiClient.get(`/diseases/${diseaseId}/treatment`)
+  },
+
+  // Rasti ligas pagal simptomus
+  async findDiseasesBySymptoms(symptoms) {
+    return await apiClient.post('/disease/find-by-symptoms', { symptoms })
   }
 }
 
