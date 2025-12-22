@@ -6,7 +6,7 @@ import { notificationService } from "../services/notificationService";
 import "../styles/Account.css";
 
 const Account = () => {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const isAdmin = user?.role === 0; // Administrator role
   const [activeTab, setActiveTab] = useState("profile");
   const [isEditing, setIsEditing] = useState(false);
@@ -264,10 +264,9 @@ const Account = () => {
     const result = await userService.deleteAccount();
 
     if (result.success) {
-      // Nukreipti į prisijungimo puslapį
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
+      // Clear all auth state and redirect to login
+      await logout();
+      window.location.href = "/";
     }
   };
 
@@ -1730,7 +1729,7 @@ const Account = () => {
           >
             Keisti slaptažodį
           </button>
-         
+
           <button
             className="btn danger"
             onClick={handleDeleteAccount}

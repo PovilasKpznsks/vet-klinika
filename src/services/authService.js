@@ -188,6 +188,10 @@ export const authService = {
     } catch (error) {
       console.error('Logout error:', error)
     } finally {
+      // Clear all auth tokens and user data from localStorage
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('authToken')
+      localStorage.removeItem('user_data')
       apiClient.setAuthToken(null)
     }
   },
